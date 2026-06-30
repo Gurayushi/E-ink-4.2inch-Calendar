@@ -203,7 +203,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             if (length > 6 && p_data[6] != 255) {
                 epd_update_display_mode(p_epd, (display_mode_t)p_data[6]);
             }
-            ble_epd_on_timer(p_epd, timestamp, true);
+            epd_request_refresh();
         } break;
 
         case EPD_CMD_SET_WEEK_START:
@@ -242,9 +242,9 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
                 memcpy(p_epd->weather.city, &p_data[17], city_len);
             }
             
-            // Trigger a display update if the screen is in clock mode
-            if (p_epd->config.display_mode == MODE_CLOCK) {
-                ble_epd_on_timer(p_epd, timestamp(), true);
+            // Trigger a display update if the screen is in clock or timetable mode
+            if (p_epd->config.display_mode == MODE_CLOCK || p_epd->config.display_mode == MODE_TIMETABLE) {
+                epd_request_refresh();
             }
             break;
         }
@@ -280,7 +280,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             epd_timetable_write(&p_epd->timetable);
 
             if (day == 5 && p_epd->config.display_mode == MODE_TIMETABLE) {
-                ble_epd_on_timer(p_epd, timestamp(), true);
+                epd_request_refresh();
             }
             break;
         }
@@ -556,10 +556,9 @@ void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, bool force_update) {
         }
     }
 
-    // Update calendar on 00:00:00, clock on every minute
-    if (force_update || (p_epd->config.display_mode == MODE_CALENDAR && timestamp % 86400 == 0) ||
-        (p_epd->config.display_mode == MODE_CLOCK && timestamp % 60 == 0) ||
-        (p_epd->config.display_mode == MODE_TIMETABLE && timestamp % 60 == 0)) {
+    // Update calendar/timetable on 00:00:00, clock on every minute
+    if (force_update || ((p_epd->config.display_mode == MODE_CALENDAR || p_epd->config.display_mode == MODE_TIMETABLE) && timestamp % 86400 == 0) ||
+        (p_epd->config.display_mode == MODE_CLOCK && timestamp % 60 == 0)) {
         epd_gui_update_event_t event = {p_epd, timestamp, force_update};
         app_sched_event_put(&event, sizeof(epd_gui_update_event_t), epd_gui_update);
     }

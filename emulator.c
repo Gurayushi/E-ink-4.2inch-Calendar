@@ -1,6 +1,8 @@
 // GUI emulator for Windows
 // This code is a simple Windows GUI application that emulates the display of an e-paper device.
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <wchar.h>
@@ -126,6 +128,128 @@ void DrawBitmap(void* user_data, uint8_t* black, uint8_t* color, uint16_t x, uin
 }
 
 // Window procedure
+
+#pragma pack(push, 1)
+typedef struct {
+    uint16_t bfType;
+    uint32_t bfSize;
+    uint16_t bfReserved1;
+    uint16_t bfReserved2;
+    uint32_t bfOffBits;
+} BMPHeader;
+
+typedef struct {
+    uint32_t biSize;
+    int32_t  biWidth;
+    int32_t  biHeight;
+    uint16_t biPlanes;
+    uint16_t biBitCount;
+    uint32_t biCompression;
+    uint32_t biSizeImage;
+    int32_t  biXPelsPerMeter;
+    int32_t  biYPelsPerMeter;
+    uint32_t biClrUsed;
+    uint32_t biClrImportant;
+} BMPInfoHeader;
+#pragma pack(pop)
+
+void SaveToBMP(const char* filename, uint8_t* black, uint8_t* color, int w, int h) {
+    FILE* f = fopen(filename, "wb");
+    if (!f) return;
+
+    int rowSize = (w * 3 + 3) & ~3;
+    int dataSize = rowSize * h;
+
+    BMPHeader header;
+    header.bfType = 0x4D42; // "BM"
+    header.bfSize = 54 + dataSize;
+    header.bfReserved1 = 0;
+    header.bfReserved2 = 0;
+    header.bfOffBits = 54;
+
+    BMPInfoHeader info;
+    info.biSize = 40;
+    info.biWidth = w;
+    info.biHeight = h;
+    info.biPlanes = 1;
+    info.biBitCount = 24;
+    info.biCompression = 0;
+    info.biSizeImage = dataSize;
+    info.biXPelsPerMeter = 2835;
+    info.biYPelsPerMeter = 2835;
+    info.biClrUsed = 0;
+    info.biClrImportant = 0;
+
+    fwrite(&header, 1, 14, f);
+    fwrite(&info, 1, 40, f);
+
+    uint8_t* rowBuf = (uint8_t*)malloc(rowSize);
+    int ePaperBytesPerRow = (w + 7) / 8;
+
+    for (int y = h - 1; y >= 0; y--) {
+        memset(rowBuf, 255, rowSize);
+        for (int x = 0; x < w; x++) {
+            int bytePos = y * ePaperBytesPerRow + x / 8;
+            int bitPos = 7 - (x % 8);
+
+            int blackBit = !((black[bytePos] >> bitPos) & 0x01);
+            int colorBit = color ? !((color[bytePos] >> bitPos) & 0x01) : 0;
+
+            int pIdx = x * 3;
+            if (colorBit) {
+                rowBuf[pIdx] = 0;
+                rowBuf[pIdx+1] = 0;
+                rowBuf[pIdx+2] = 255; // Red (BGR: Blue=0, Green=0, Red=255)
+            } else if (blackBit) {
+                rowBuf[pIdx] = 0;
+                rowBuf[pIdx+1] = 0;
+                rowBuf[pIdx+2] = 0;
+            } else {
+                rowBuf[pIdx] = 255;
+                rowBuf[pIdx+1] = 255;
+                rowBuf[pIdx+2] = 255;
+            }
+        }
+        fwrite(rowBuf, 1, rowSize, f);
+    }
+
+    free(rowBuf);
+    fclose(f);
+}
+
+void SaveBitmapCallback(void* user_data, uint8_t* black, uint8_t* color, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    static uint8_t* full_black = NULL;
+    static uint8_t* full_color = NULL;
+    
+    if (y == 0) {
+        if (!full_black) full_black = malloc(15000);
+        if (!full_color) full_color = malloc(15000);
+        memset(full_black, 255, 15000);
+        memset(full_color, 255, 15000);
+    }
+    
+    int bytesPerRow = (w + 7) / 8;
+    int pageSize = h * bytesPerRow;
+    int offset = y * bytesPerRow;
+    
+    if (offset + pageSize <= 15000) {
+        if (black && full_black) memcpy(full_black + offset, black, pageSize);
+        if (color && full_color) memcpy(full_color + offset, color, pageSize);
+    }
+    
+    if (y + h >= 300) {
+        const char* filename = (const char*)user_data;
+        if (!filename) filename = "calendar.bmp";
+        SaveToBMP(filename, full_black, full_color, 400, 300);
+        
+        // Free and reset for next run
+        free(full_black);
+        free(full_color);
+        full_black = NULL;
+        full_color = NULL;
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_CREATE:
@@ -313,6 +437,59 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 // Main entry point
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    if (lpCmdLine && (strstr(lpCmdLine, "save") || strstr(lpCmdLine, "-save"))) {
+        gui_data_t data = {
+            .mode = MODE_CALENDAR,
+            .color = 2,
+            .width = BITMAP_WIDTH,
+            .height = BITMAP_HEIGHT,
+            .week_start = 1,
+            .language = 1, // Vietnamese
+            .temperature = 25,
+            .voltage = 3300,
+            .ssid = "NRF_EPD_1B4F",
+        };
+        
+        // January 1, 2025 23:30 -> Lunar Dec 2nd, Giáp Thìn
+        struct tm tm_t = {0};
+        tm_t.tm_year = 2025 - 1900;
+        tm_t.tm_mon = 0; // Jan
+        tm_t.tm_mday = 1;
+        tm_t.tm_hour = 23;
+        tm_t.tm_min = 30;
+        tm_t.tm_sec = 0;
+        tm_t.tm_isdst = -1;
+        
+        data.timestamp = mktime(&tm_t);
+        
+        DrawGUI(&data, SaveBitmapCallback, "calendar.bmp");
+        
+        // Populate and save timetable image
+        data.mode = MODE_TIMETABLE;
+        memset(&data.timetable, 0, sizeof(data.timetable));
+        strcpy(data.timetable.morning[0], "Toán học");
+        strcpy(data.timetable.afternoon[0], "Chào Cờ");
+        strcpy(data.timetable.evening[0], "Sinh hoạt");
+        
+        strcpy(data.timetable.morning[1], "Ngữ Văn");
+        strcpy(data.timetable.afternoon[1], "Ngoại Ngữ");
+        
+        strcpy(data.timetable.morning[2], "Lịch Sử");
+        strcpy(data.timetable.afternoon[2], "Địa Lý");
+        
+        strcpy(data.timetable.morning[3], "Vật Lý");
+        strcpy(data.timetable.afternoon[3], "Hóa Học");
+        
+        strcpy(data.timetable.morning[4], "Sinh học");
+        strcpy(data.timetable.afternoon[4], "Tin học");
+        
+        strcpy(data.timetable.morning[5], "Thể dục");
+        strcpy(data.timetable.afternoon[5], "Mỹ thuật");
+        
+        DrawGUI(&data, SaveBitmapCallback, "timetable.bmp");
+        return 0;
+    }
+
     g_hInstance = hInstance;
 
     // Register window class

@@ -380,6 +380,7 @@ function handleNotify(value, idx) {
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
     epddriver.value = bytes2hex(data.slice(7, 8));
+    updateDitcherOptions();
     
     // Update local language selector if device has it configured
     if (data.length > 13) {

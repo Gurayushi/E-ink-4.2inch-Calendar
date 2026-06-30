@@ -100,6 +100,7 @@ BLE_EPD_DEF(m_epd);                                                             
 static uint32_t                          m_timestamp = 1735689600;                      /**< Current timestamp. */
 APP_TIMER_DEF(m_clock_timer_id);                                                        /**< Clock timer. */
 APP_TIMER_DEF(m_led_timer_id);                                                          /**< LED off timer. */
+APP_TIMER_DEF(m_refresh_timer_id);                                                      /**< Deferred EPD refresh timer. */
 static nrf_drv_wdt_channel_id            m_wdt_channel_id;
 static uint32_t                          m_wdt_last_feed_time = 0;
 static uint32_t                          m_resetreas;
@@ -233,6 +234,16 @@ void EPD_LED_Trigger(void) {
     app_timer_start(m_led_timer_id, APP_TIMER_TICKS(1000), NULL);
 }
 
+static void refresh_timer_timeout_handler(void* p_context) {
+    UNUSED_PARAMETER(p_context);
+    ble_epd_on_timer(&m_epd, m_timestamp, true);
+}
+
+void epd_request_refresh(void) {
+    app_timer_stop(m_refresh_timer_id);
+    app_timer_start(m_refresh_timer_id, APP_TIMER_TICKS(2000), NULL);
+}
+
 static void clock_timer_timeout_handler(void* p_context) {
     UNUSED_PARAMETER(p_context);
 
@@ -278,6 +289,7 @@ static void timers_init(void) {
     // Create timers.
     APP_ERROR_CHECK(app_timer_create(&m_clock_timer_id, APP_TIMER_MODE_REPEATED, clock_timer_timeout_handler));
     APP_ERROR_CHECK(app_timer_create(&m_led_timer_id, APP_TIMER_MODE_SINGLE_SHOT, led_timer_timeout_handler));
+    APP_ERROR_CHECK(app_timer_create(&m_refresh_timer_id, APP_TIMER_MODE_SINGLE_SHOT, refresh_timer_timeout_handler));
 }
 
 /**@brief Function for starting application timers.
