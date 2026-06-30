@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title data-i18n="title">Lịch E-Paper</title>
+	<link rel="shortcut icon" type="image/png" href="favicon.png">
+	<link rel="stylesheet" href="css/main.css?v=20251109">
+</head>
+
+<body>
+	<div class="main">
+		<h3>
+			<span data-i18n="title">Lịch E-Paper</span>
+			<div class="header-controls">
+				<div class="theme-switch-wrapper">
+					<span class="theme-icon">☀️</span>
+					<label class="theme-switch" for="checkbox-theme">
+						<input type="checkbox" id="checkbox-theme" onchange="toggleTheme(this.checked)" />
+						<div class="slider"></div>
+					</label>
+					<span class="theme-icon">🌙</span>
+				</div>
+			</div>
+		</h3>
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title" data-i18n="ble_connection">Kết nối Bluetooth</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<div class="flex-container">
+					<div class="flex-group">
+						<button id="connectbutton" type="button" class="primary" onclick="preConnect()" data-i18n="connect_btn">Kết nối</button>
+						<button id="reconnectbutton" type="button" class="secondary" onclick="reConnect()" data-i18n="reconnect_btn">Kết nối lại</button>
+						<button type="button" class="secondary" onclick="clearLog()" data-i18n="clear_log_btn">Xóa Log</button>
+					</div>
+					<div class="flex-group right debug">
+						<label for="epddriver" data-i18n="driver_label">Driver</label>
+						<select id="epddriver" onchange="updateDitcherOptions()">
+							<option value="01" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, UC8176)</option>
+							<option value="03" data-color="threeColor" data-size="4.2_400_300">4.2" (3-Color, UC8176)</option>
+							<option value="04" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, SSD1619)</option>
+							<option value="02" data-color="threeColor" data-size="4.2_400_300">4.2" (3-Color, SSD1619)</option>
+							<option value="05" data-color="fourColor" data-size="4.2_400_300">4.2" (4-Color, JD79668)</option>
+							<option value="0d" data-color="fourColor" data-size="5.83_648_480">5.83" (4-Color, JD79665)</option>
+							<option value="06" data-color="blackWhiteColor" data-size="7.5_800_480">7.5" (B/W, UC8179)</option>
+							<option value="07" data-color="threeColor" data-size="7.5_800_480">7.5" (3-Color, UC8179)</option>
+							<option value="0c" data-color="fourColor" data-size="7.5_800_480">7.5" (4-Color, JD79665)</option>
+							<option value="08" data-color="blackWhiteColor" data-size="7.5_640_384">7.5" Low Res (B/W, UC8159)</option>
+							<option value="09" data-color="threeColor" data-size="7.5_640_384">7.5" Low Res (3-Color, UC8159)</option>
+							<option value="0a" data-color="blackWhiteColor" data-size="7.5_880_528">7.5" HD (B/W, SSD1677)</option>
+							<option value="0b" data-color="threeColor" data-size="7.5_880_528">7.5" HD (3-Color, SSD1677)</option>
+						</select>
+					</div>
+					<div class="flex-group debug">
+						<label for="epdpins" data-i18n="pin_label">Chân (Pins)</label>
+						<input id="epdpins" type="text" value="">
+						<button id="setDriverbutton" type="button" class="primary" onclick="setDriver()" data-i18n="confirm_btn">Xác nhận</button>
+					</div>
+				</div>
+				<div class="log-container" id="log"></div>
+			</div>
+		</fieldset>
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title" data-i18n="device_control">Thiết bị & Cấu hình</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<div style="margin-bottom: 12px; font-family: sans-serif; display: flex; align-items: center; gap: 8px;">
+					<label for="weather-city-input" style="font-weight: bold; font-size: 0.9em; min-width: 140px;">Vị trí thời tiết:</label>
+					<input type="text" id="weather-city-input" placeholder="Tự động lấy vị trí..." style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; flex: 1; max-width: 250px; color: black; background: white;">
+				</div>
+				<div class="flex-container">
+					<div class="flex-group">
+						<button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
+						<button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
+						<button id="timetablemodebutton" type="button" class="primary" onclick="syncTime(3)">Chế độ T.Khóa Biểu</button>
+						<button id="synctimebutton" type="button" class="primary" onclick="syncTime(255)">Đồng bộ thời gian</button>
+						<button id="syncweatherbutton" type="button" class="primary" onclick="syncWeather()" data-i18n="sync_weather_btn">Đồng bộ thời tiết</button>
+						<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()" data-i18n="clear_screen_btn">Xóa màn hình</button>
+					</div>
+					<div class="flex-group right debug">
+						<input type="text" id="cmdTXT" value="">
+						<button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()" data-i18n="send_cmd_btn">Gửi Lệnh</button>
+					</div>
+				</div>
+			</div>
+		</fieldset>
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title">Thời khóa biểu</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<div class="timetable-cards-container">
+					<!-- Thứ Hai -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Hai</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-0">Sáng</label>
+								<input type="text" id="tt-m-0" maxlength="30" placeholder="Ví dụ: Họp Team (09:00)">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-0">Chiều</label>
+								<input type="text" id="tt-a-0" maxlength="30" placeholder="Ví dụ: Viết Báo Cáo">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-0">Tối</label>
+								<input type="text" id="tt-e-0" maxlength="30" placeholder="Ví dụ: Học Thêm">
+							</div>
+						</div>
+					</div>
+					<!-- Thứ Ba -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Ba</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-1">Sáng</label>
+								<input type="text" id="tt-m-1" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-1">Chiều</label>
+								<input type="text" id="tt-a-1" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-1">Tối</label>
+								<input type="text" id="tt-e-1" maxlength="30" placeholder="">
+							</div>
+						</div>
+					</div>
+					<!-- Thứ Tư -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Tư</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-2">Sáng</label>
+								<input type="text" id="tt-m-2" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-2">Chiều</label>
+								<input type="text" id="tt-a-2" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-2">Tối</label>
+								<input type="text" id="tt-e-2" maxlength="30" placeholder="">
+							</div>
+						</div>
+					</div>
+					<!-- Thứ Năm -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Năm</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-3">Sáng</label>
+								<input type="text" id="tt-m-3" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-3">Chiều</label>
+								<input type="text" id="tt-a-3" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-3">Tối</label>
+								<input type="text" id="tt-e-3" maxlength="30" placeholder="">
+							</div>
+						</div>
+					</div>
+					<!-- Thứ Sáu -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Sáu</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-4">Sáng</label>
+								<input type="text" id="tt-m-4" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-4">Chiều</label>
+								<input type="text" id="tt-a-4" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-4">Tối</label>
+								<input type="text" id="tt-e-4" maxlength="30" placeholder="">
+							</div>
+						</div>
+					</div>
+					<!-- Thứ Bảy -->
+					<div class="timetable-card">
+						<div class="timetable-card-header">Thứ Bảy</div>
+						<div class="timetable-card-body">
+							<div class="timetable-field">
+								<label for="tt-m-5">Sáng</label>
+								<input type="text" id="tt-m-5" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-a-5">Chiều</label>
+								<input type="text" id="tt-a-5" maxlength="30" placeholder="">
+							</div>
+							<div class="timetable-field">
+								<label for="tt-e-5">Tối</label>
+								<input type="text" id="tt-e-5" maxlength="30" placeholder="">
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="flex-container" style="justify-content: center; margin-top: 15px;">
+					<button id="sendtimetablebutton" type="button" class="primary" onclick="sendTimetable()">Gửi Thời khóa biểu lên đồng hồ</button>
+				</div>
+			</div>
+		</fieldset>
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title">Lịch tắt màn hình (Tiết kiệm pin)</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4;">
+					Thiết lập tối đa 4 khung giờ trong ngày cho **từng ngày trong tuần** để <strong>DỪNG cập nhật màn hình</strong> (tiết kiệm pin). Đồng hồ sẽ tự động bỏ qua các lượt cập nhật khi thời gian hiện tại nằm trong các khoảng này.
+				</p>
+				
+				<div class="sleep-schedule-container">
+					<!-- Thứ Hai -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Hai</div>
+						<div class="sleep-day-slots" id="sleep-shelf-0"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-0" onchange="toggleSleepOverride(0)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Thứ Ba -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Ba</div>
+						<div class="sleep-day-slots" id="sleep-shelf-1"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-1" onchange="toggleSleepOverride(1)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Thứ Tư -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Tư</div>
+						<div class="sleep-day-slots" id="sleep-shelf-2"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-2" onchange="toggleSleepOverride(2)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Thứ Năm -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Năm</div>
+						<div class="sleep-day-slots" id="sleep-shelf-3"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-3" onchange="toggleSleepOverride(3)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Thứ Sáu -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Sáu</div>
+						<div class="sleep-day-slots" id="sleep-shelf-4"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-4" onchange="toggleSleepOverride(4)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Thứ Bảy -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Thứ Bảy</div>
+						<div class="sleep-day-slots" id="sleep-shelf-5"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-5" onchange="toggleSleepOverride(5)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+
+					<!-- Chủ Nhật -->
+					<div class="sleep-day-row">
+						<div class="sleep-day-name">Chủ Nhật</div>
+						<div class="sleep-day-slots" id="sleep-shelf-6"></div>
+						<div class="sleep-day-toggle">
+							<span class="toggle-label">Bật T.Kiệm</span>
+							<label class="switch">
+								<input type="checkbox" id="sleep-override-btn-6" onchange="toggleSleepOverride(6)">
+								<span class="switch-slider"></span>
+							</label>
+						</div>
+					</div>
+				</div>
+				<div class="flex-container" style="justify-content: center; margin-top: 15px;">
+					<button id="sendsleepbutton" type="button" class="primary" onclick="sendSleepSchedule()">Gửi cấu hình Lịch tắt (Tất cả các ngày)</button>
+				</div>
+			</div>
+		</fieldset>
+
+		<!-- Add Interval Modal Popup -->
+		<div id="sleep-modal" class="custom-dialog-overlay">
+			<div class="custom-dialog-box">
+				<h4 id="sleep-modal-title">Thêm khung giờ tắt</h4>
+				
+				<div class="modal-form-group" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; text-align: left;">
+					<label for="modal-sleep-start" style="font-weight: bold; font-size: 0.9em;">Giờ bắt đầu:</label>
+					<select id="modal-sleep-start" style="width: 100%; box-sizing: border-box;"></select>
+				</div>
+				
+				<div class="modal-form-group" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; text-align: left;">
+					<label for="modal-sleep-end" style="font-weight: bold; font-size: 0.9em;">Giờ kết thúc:</label>
+					<select id="modal-sleep-end" style="width: 100%; box-sizing: border-box;"></select>
+				</div>
+				
+				<div class="custom-dialog-actions">
+					<button type="button" onclick="closeSleepModal()" class="secondary">Hủy</button>
+					<button type="button" onclick="confirmSleepModal()" class="primary">Đồng ý</button>
+				</div>
+			</div>
+		</div>
+
+
+
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title" data-i18n="ble_transfer">Truyền Ảnh</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<div class="flex-container">
+					<input type="file" id="imageFile" accept=".png,.jpg,.bmp,.webp,.jpeg" onchange="updateImage()">
+				</div>
+				<div class="flex-container options">
+					<div class="flex-group debug">
+						<label for="canvasSize" data-i18n="canvas_size">Kích thước:</label>
+						<select id="canvasSize" onchange="updateCanvasSize()">
+							<option value="1.54_152_152">1.54 (152x152)</option>
+							<option value="1.54_200_200">1.54 (200x200)</option>
+							<option value="2.13_104_212">2.13 (104x212)</option>
+							<option value="2.13_122_250">2.13 (122x250)</option>
+							<option value="2.66_152_296">2.66 (152x296)</option>
+							<option value="2.66_184_360">2.66 (184x360)</option>
+							<option value="2.9_128_296">2.9 (128x296)</option>
+							<option value="2.9_168_384">2.9 (168x384)</option>
+							<option value="3.5_184_384">3.5 (184x384)</option>
+							<option value="3.5_360_600">3.5 (360x600)</option>
+							<option value="3.7_240_416">3.7 (240x416)</option>
+							<option value="3.7_280_480">3.7 (280x480)</option>
+							<option value="3.97_800_480">3.97 (800x480)</option>
+							<option value="3.98_768_552">3.98 (768x552)</option>
+							<option value="4.2_400_300" selected>4.2 (400x300)</option>
+							<option value="5.79_792_272">5.79 (792x272)</option>
+							<option value="5.83_600_448">5.83 (600x448)</option>
+							<option value="5.83_648_480">5.83 (648x480)</option>
+							<option value="7.5_640_384">7.5 (640x384)</option>
+							<option value="7.5_800_480">7.5 (800x480)</option>
+							<option value="7.5_880_528">7.5 (880x528)</option>
+							<option value="10.2_960_640">10.2 (960x640)</option>
+							<option value="10.85_1360_480">10.85 (1360x480)</option>
+							<option value="11.6_960_640">11.6 (960x640)</option>
+							<option value="4.0E6_600_400">4.0E6 (600x400)</option>
+							<option value="7.3E6_800_480">7.3E6 (800x480)</option>
+						</select>
+					</div>
+					<div class="flex-group debug">
+						<label for="ditherMode" data-i18n="color_mode">Chế độ màu:</label>
+						<select id="ditherMode" onchange="applyDither()">
+							<option value="blackWhiteColor">B/W (2-Color)</option>
+							<option value="threeColor">B/W/R (3-Color)</option>
+							<option value="fourColor">B/W/R/Y (4-Color)</option>
+							<option value="sixColor">6-Color</option>
+						</select>
+					</div>
+					<div class="flex-group">
+						<label for="ditherAlg" data-i18n="dither_alg">Kiểu Dither:</label>
+						<select id="ditherAlg" onchange="applyDither()">
+							<option value="floydSteinberg">Floyd-Steinberg</option>
+							<option value="atkinson">Atkinson</option>
+							<option value="bayer">Bayer</option>
+							<option value="stucki">Stucki</option>
+							<option value="jarvis">Jarvis-Judice-Ninke</option>
+							<option value="none">None (No Dithering)</option>
+						</select>
+					</div>
+					<div class="flex-group">
+						<label for="ditherStrength" data-i18n="dither_strength">Độ Dither:</label>
+						<input type="range" min="0" max="5" step="0.1" value="1.0" id="ditherStrength">
+						<label id="ditherStrengthValue">1.0</label>
+					</div>
+					<div class="flex-group">
+						<label for="ditherContrast" data-i18n="contrast">Độ tương phản:</label>
+						<input type="range" min="0.5" max="2" step="0.1" value="1.2" id="ditherContrast">
+						<label id="ditherContrastValue">1.2</label>
+					</div>
+				</div>
+				<div class="flex-container options">
+					<div class="flex-group debug">
+						<label for="mtusize">MTU:</label>
+						<input type="number" id="mtusize" value="20" min="0" max="255">
+						<label for="interleavedcount" data-i18n="confirm_interval">K.hoảng ACK:</label>
+						<input type="number" id="interleavedcount" value="50" min="0" max="500">
+					</div>
+				</div>
+				<div class="status-bar"><b data-i18n="status">Trạng thái: </b><span id="status"></span></div>
+				<div class="flex-container">
+					<div class="flex-group">
+						<button type="button" class="secondary debug" onclick="rotateCanvas()" data-i18n="rotate_canvas_btn">Xoay Ảnh</button>
+						<button type="button" class="secondary" onclick="clearCanvas()" data-i18n="clear_canvas_btn">Xóa Ảnh</button>
+						<button type="button" class="secondary debug" onclick="downloadDataArray()" data-i18n="download_array_btn">Tải mảng C</button>
+						<button id="sendimgbutton" type="button" class="primary" onclick="sendimg()" data-i18n="send_img_btn">Gửi Ảnh</button>
+					</div>
+				</div>
+				<div class="canvas-container">
+					<div class="canvas-title"></div>
+					<canvas id="canvas" width="400" height="300"></canvas>
+					<div class="flex-container canvas-tools">
+						<div class="flex-group tool-buttons">
+							<button id="brush-mode" title="Brush" class="tool-button">✏️</button>
+							<button id="eraser-mode" title="Eraser" class="tool-button">🧽</button>
+							<button id="text-mode" title="Add Text" class="tool-button">T</button>
+							<button id="undo-btn" title="Undo (Ctrl+Z)" class="tool-button hide">↶</button>
+							<button id="redo-btn" title="Redo (Ctrl+Y)" class="tool-button hide">↷</button>
+						</div>
+					</div>
+					<div class="flex-container canvas-tools">
+						<div class="flex-group brush-tools">
+							<label for="brush-color" data-i18n="brush_color">Màu cọ:</label>
+							<select id="brush-color">
+								<option value="#000000">Black</option>
+								<option value="#FF0000">Red</option>
+								<option value="#FFFF00">Yellow</option>
+								<option value="#00FF00">Green</option>
+								<option value="#0000FF">Blue</option>
+								<option value="#FFFFFF">White</option>
+							</select>
+							<label for="brush-size" data-i18n="brush_size">Cỡ cọ:</label>
+							<input type="number" id="brush-size" value="2" min="1" max="100">
+						</div>
+					</div>
+					<div class="flex-container canvas-tools">
+						<div class="flex-group text-tools">
+							<label for="font-family" data-i18n="font_family">Font chữ:</label>
+							<select id="font-family">
+								<option value="Arial">Arial</option>
+								<option value="sans-serif">Sans-serif</option>
+								<option value="monospace">Monospace</option>
+								<option value="Times New Roman">Times New Roman</option>
+								<option value="Courier New">Courier New</option>
+								<option value="Verdana">Verdana</option>
+								<option value="Tahoma">Tahoma</option>
+								<option value="Georgia">Georgia</option>
+							</select>
+							<label for="font-size" data-i18n="font_size">Cỡ chữ:</label>
+							<input type="number" id="font-size" value="16" min="1" max="100">
+						</div>
+						<div class="flex-group text-tools">
+							<input type="text" id="text-input" placeholder="Nhập chữ" style="width:150px" data-i18n="text_input_placeholder">
+							<button id="text-bold" title="Bold">B</button>
+							<button id="text-italic" title="Italic">I</button>
+							<button id="add-text-btn" class="primary" data-i18n="add_text_btn">Thêm chữ</button>
+						</div>
+						<div class="flex-group crop-tools">
+							<button id="crop-zoom-in" title="Zoom In" class="secondary">+</button>
+							<button id="crop-zoom-out" title="Zoom Out" class="secondary">-</button>
+							<button id="crop-move-left" title="Move Left">⇦</button>
+							<button id="crop-move-up" title="Move Up">⇧</button>
+							<button id="crop-move-down" title="Move Down">⇩</button>
+							<button id="crop-move-right" title="Move Right">⇨</button>
+							<button class="primary" onclick="applyDither()" data-i18n="finish_btn">Hoàn tất</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</fieldset>
+		<div class="footer">
+			<span class="copy">&copy; 2025 tsl0922.</span>
+			<span class="links">
+				<a href="https://github.com/tsl0922/EPD-nRF5">Github</a>
+				<a href="?debug=true" id="debug-toggle" data-i18n="dev_mode">Chế độ Dev</a>
+			</span>
+		</div>
+	</div>
+	<script type="text/javascript" src="js/lang.js?v=20251109"></script>
+	<script type="text/javascript" src="js/dithering.js?v=20251109"></script>
+
+	<script type="text/javascript" src="js/paint.js?v=20251109"></script>
+	<script type="text/javascript" src="js/crop.js?v=20251109"></script>
+	<script type="text/javascript" src="js/main.js?v=20251109"></script>
+	<script>
+		var _hmt = _hmt || [];
+		(function () {
+			var hm = document.createElement("script");
+			hm.src = "https://hm.baidu.com/hm.js?c5949ebea1f35f725f7b05fcce462b61";
+			var s = document.getElementsByTagName("script")[0];
+			s.parentNode.insertBefore(hm, s);
+		})();
+	</script>
+</body>
+
+</html>
