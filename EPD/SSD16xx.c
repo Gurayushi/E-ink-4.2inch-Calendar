@@ -85,7 +85,7 @@ void SSD16xx_WriteImage(epd_model_t* epd, uint8_t* black, uint8_t* color, uint16
             if (epd->color == COLOR_BWR)
                 EPD_WriteByte(color ? color[j + i * wb] : 0xFF);
             else
-                EPD_WriteByte(black[j + i * wb]);
+                EPD_WriteByte(black ? black[j + i * wb] : 0xFF);
         }
     }
 }

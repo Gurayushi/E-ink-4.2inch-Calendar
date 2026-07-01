@@ -389,7 +389,7 @@
     if (window.currentDisplayMode !== 4) {
       addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
       await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Delay to allow device to save config and initialize
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
     }
 
     // Send EPD_CMD_SET_EVENT (0x25)
@@ -456,7 +456,7 @@
     if (window.currentDisplayMode !== 4) {
       addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
       await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Delay to allow device to save config and initialize
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
     }
 
     if (!window.skipNoteEventSync) {

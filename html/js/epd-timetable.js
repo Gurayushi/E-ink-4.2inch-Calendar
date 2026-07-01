@@ -487,7 +487,7 @@
     if (window.currentDisplayMode !== 3) {
       if (typeof addLog === 'function') addLog('Đang chuyển đồng hồ sang Chế độ Thời Khóa Biểu...');
       await syncTime(3, true);
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 2000));
     }
 
     // Process image (dither)
