@@ -1,37 +1,37 @@
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
-Build target 'nRF51822_xxAA'
-compiling GUI.c...
+Build target 'nRF52811_xxAA'
+compiling EPD_service.c...
 linking...
-Program Size: Code=43736 RO-data=15984 RW-data=332 ZI-data=8172  
+Program Size: Code=45008 RO-data=16568 RW-data=356 ZI-data=12300  
 FromELF: creating hex file...
-After Build - User command #1: ..\tools\make-ota-nrf51.bat d:\EPD-nRF5-main\Keil\_build_nRF51\ EPD-nRF51
-Zip created at d:\EPD-nRF5-main\Keil\_build_nRF51\EPD-nRF51-ota.zip
+After Build - User command #1: ..\tools\make-ota-nrf52.bat d:\EPD-nRF5-main\Keil\_build_nRF52\ EPD-nRF52
+Zip created at d:\EPD-nRF5-main\Keil\_build_nRF52\EPD-nRF52-ota.zip
 
-Generated Bootloader DFU settings .hex file and stored it in: d:\EPD-nRF5-main\Keil\_build_nRF51\EPD-nRF51-settings.hex
+Generated Bootloader DFU settings .hex file and stored it in: d:\EPD-nRF5-main\Keil\_build_nRF52\EPD-nRF52-settings.hex
 
 Bootloader DFU Settings:
-* File:                     d:\EPD-nRF5-main\Keil\_build_nRF51\EPD-nRF51-settings.hex
-* Family:                   nRF51
-* Start Address:            0x0003FC00
-* CRC:                      0xECA7072C
+* File:                     d:\EPD-nRF5-main\Keil\_build_nRF52\EPD-nRF52-settings.hex
+* Family:                   NRF52810
+* Start Address:            0x0002F000
+* CRC:                      0xB4B58A9A
 * Settings Version:         0x00000001 (1)
-* App Version:              0x00000019 (25)
+* App Version:              0xFFFFFFFF (4294967295)
 * Bootloader Version:       0x00000001 (1)
 * Bank Layout:              0x00000000
 * Current Bank:             0x00000000
-* Application Size:         0x0000E990 (59792 bytes)
-* Application CRC:          0xD51BB493
+* Application Size:         0x0000F0D0 (61648 bytes)
+* Application CRC:          0xA77822F2
 * Bank0 Bank Code:          0x00000001
-* Softdevice Size:          0x00019FE0 (106464 bytes)
+* Softdevice Size:          0x00017F14 (98068 bytes)
 * Boot Validation CRC:      0x00000000
 * SD Boot Validation Type:  0x00000000 (0)
 * App Boot Validation Type: 0x00000000 (0)
 
 Parsing input files.
-Merging file "s130_nrf51_2.0.1_softdevice.hex" into output.
-Merging file "bl_nrf51822_xxaa_s130.hex" into output.
-Merging file "EPD-nRF51.hex" into output.
-Merging file "EPD-nRF51-settings.hex" into output.
+Merging file "s112_nrf52_7.3.0_softdevice.hex" into output.
+Merging file "bl_nrf52811_xxaa_s112.hex" into output.
+Merging file "EPD-nRF52.hex" into output.
+Merging file "EPD-nRF52-settings.hex" into output.
 Storing merged file.
-".\_build_nRF51\EPD-nRF51.axf" - 0 Error(s), 0 Warning(s).
+".\_build_nRF52\EPD-nRF52.axf" - 0 Error(s), 0 Warning(s).
 Build Time Elapsed:  00:00:09

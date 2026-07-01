@@ -118,6 +118,7 @@ static void on_disconnect(ble_epd_t* p_epd, ble_evt_t* p_ble_evt) {
     UNUSED_PARAMETER(p_ble_evt);
     p_epd->conn_handle = BLE_CONN_HANDLE_INVALID;
     if (p_epd->epd) {
+        EPD_GPIO_Init();
         p_epd->epd->drv->sleep(p_epd->epd);
         nrf_delay_ms(200);  // for sleep
     }
