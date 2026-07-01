@@ -1122,6 +1122,7 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     }
 }
 
+#if 0
 static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) {
     GFX_setFont(gfx, u8g2_font_arial_11);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
@@ -1171,7 +1172,7 @@ static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) 
         day_str[2] = '\0';
         
         int16_t w = GFX_getUTF8Width(gfx, day_str);
-
+ 
         if (day == mday) {
             int16_t box_x = draw_x + 1;
             int16_t box_y = draw_y - 9;
@@ -1255,32 +1256,35 @@ static void DrawWrappedText(Adafruit_GFX* gfx, const char* text, int16_t col_x, 
     GFX_setCursor(gfx, col_x + (col_w - w2) / 2, start_y + fh + 3);
     GFX_printf(gfx, "%s", line2);
 }
+#endif
+
+static const char* GetWeekdayLowerStr(uint8_t wday) {
+    switch (wday) {
+        case 0: return "chủ nhật";
+        case 1: return "thứ hai";
+        case 2: return "thứ ba";
+        case 3: return "thứ tư";
+        case 4: return "thứ năm";
+        case 5: return "thứ sáu";
+        case 6: return "thứ bảy";
+        default: return "";
+    }
+}
 
 static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui_data_t* data) {
-    // 1. Draw outer border & grid dividers
-    GFX_drawRect(gfx, 6, 6, 388, 288, GFX_BLACK);
-    
-    // Draw monthly calendar in top-left
-    DrawMiniCalendar(gfx, tm, 12, 12);
-    
-    // Draw digital clock in top-right
-    uint16_t cS = 2;
-    uint16_t nD = 2;
-    uint16_t time_width = 2 * (nD * (11 * cS + 2) - 2 * cS) + 4 * cS;
-    int16_t time_x = 388 - time_width - 12; // align right
-    int16_t time_y = 12 + (78 - 42) / 2; // vertically center in header
-    DrawTime(gfx, tm, time_x, time_y, cS, nD, GFX_BLACK);
-    
-    // Draw title "THỜI KHÓA BIỂU" in red in center (moved up to y=33)
-    GFX_setFont(gfx, u8g2_font_arial_13);
+    // 1. Clear and draw border/dividers in the 50px header area
+    GFX_fillRect(gfx, 0, 0, 400, 50, GFX_WHITE);
+    GFX_drawFastHLine(gfx, 0, 49, 400, GFX_BLACK);
+    GFX_drawFastVLine(gfx, 200, 0, 49, GFX_BLACK);
+
+    // 2. Draw Left Part (x = 0..199)
+    // Top: "THỜI GIAN BIỂU" in red and uppercase
+    GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
     GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-    const char* title = "THỜI KHÓA BIỂU";
-    uint16_t title_w = GFX_getUTF8Width(gfx, title);
-    int16_t title_x = 122 + (time_x - 122 - title_w) / 2;
-    GFX_setCursor(gfx, title_x, 33);
-    GFX_printf(gfx, "%s", title);
-    
-    // Draw temperature and weather today right under title (y=52)
+    GFX_setCursor(gfx, 10, 16);
+    GFX_printf(gfx, "THỜI GIAN BIỂU");
+
+    // Bottom: room temperature and current weather
     uint8_t today_weather = data->weather.morning_weather;
     int8_t today_temp = data->weather.morning_temp;
     if (tm->tm_hour >= 12 && tm->tm_hour < 18) {
@@ -1290,83 +1294,38 @@ static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar,
         today_weather = data->weather.evening_weather;
         today_temp = data->weather.evening_temp;
     }
+
+    char left_bottom[64];
+    snprintf(left_bottom, sizeof(left_bottom), "Phòng: %d°C | %d°C - %s", 
+             data->temperature, today_temp, GetWeatherDesc(today_weather, data->language));
     
     GFX_setFont(gfx, u8g2_font_arial_11);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+    GFX_setCursor(gfx, 10, 40);
+    GFX_printf(gfx, "%s", left_bottom);
+
+    // 3. Draw Right Part (x = 201..399)
+    // Top: digital clock
+    char time_str[16];
+    snprintf(time_str, sizeof(time_str), "%02d:%02d", tm->tm_hour, tm->tm_min);
+    GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
+    GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+    uint16_t w_time = GFX_getUTF8Width(gfx, time_str);
+    int16_t time_x = 200 + (200 - w_time) / 2;
+    GFX_setCursor(gfx, time_x, 16);
+    GFX_printf(gfx, "%s", time_str);
+
+    // Bottom: date formatted as "thứ ... ngày/tháng/năm"
+    char date_str[64];
+    snprintf(date_str, sizeof(date_str), "%s ngày %02d/%02d/%d", 
+             GetWeekdayLowerStr(tm->tm_wday), tm->tm_mday, tm->tm_mon + 1, tm->tm_year + YEAR0);
     
-    char weather_str[64];
-    snprintf(weather_str, sizeof(weather_str), "T.tiết: %d°C - %s", today_temp, GetWeatherDesc(today_weather, data->language));
-    uint16_t weather_w = GFX_getUTF8Width(gfx, weather_str);
-    int16_t weather_x = 122 + (time_x - 122 - weather_w) / 2;
-    GFX_setCursor(gfx, weather_x, 52);
-    GFX_printf(gfx, "%s", weather_str);
-    
-    // Draw room temperature under weather (y=71)
-    char temp_str[32];
-    snprintf(temp_str, sizeof(temp_str), "Nhiệt phòng: %d°C", data->temperature);
-    uint16_t temp_w = GFX_getUTF8Width(gfx, temp_str);
-    int16_t temp_x = 122 + (time_x - 122 - temp_w) / 2;
-    GFX_setCursor(gfx, temp_x, 71);
-    GFX_printf(gfx, "%s", temp_str);
-    
-    // 2. Draw timetable grid
-    GFX_drawRect(gfx, 6, 96, 388, 196, GFX_BLACK);
-    
-    // Horizontal lines
-    for (int i = 1; i <= 6; i++) {
-        GFX_drawFastHLine(gfx, 6, 96 + i * 28, 388, GFX_BLACK);
-    }
-    
-    // Vertical lines
-    GFX_drawFastVLine(gfx, 56, 96, 196, GFX_BLACK);
-    GFX_drawFastVLine(gfx, 168, 96, 196, GFX_BLACK);
-    GFX_drawFastVLine(gfx, 281, 96, 196, GFX_BLACK);
-    
-    // Headers
-    static const char* const headers[] = {"THỨ", "SÁNG", "CHIỀU", "TỐI"};
-    static const int16_t header_x[] = {6, 56, 168, 281};
-    static const int16_t header_w[] = {50, 112, 113, 113};
-    GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-    for (int i = 0; i < 4; i++) {
-        GFX_setCursor(gfx, header_x[i] + (header_w[i] - GFX_getUTF8Width(gfx, headers[i])) / 2, 115);
-        GFX_printf(gfx, "%s", headers[i]);
-    }
-    
-    // Weekday names
-    static const char* const weekdays[] = {"HAI", "BA", "TƯ", "NĂM", "SÁU", "BẢY"};
-    
-    // Fill the cells
-    for (int day = 0; day < 6; day++) {
-        uint16_t row_y = 96 + (day + 1) * 28;
-        bool is_current = (tm->tm_wday == (day + 1));
-        
-        // Print weekday name
-        GFX_setFont(gfx, u8g2_font_arial_13);
-        if (is_current) {
-            GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-        } else {
-            GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-        }
-        GFX_setCursor(gfx, 6 + (50 - GFX_getUTF8Width(gfx, weekdays[day])) / 2, row_y + 19);
-        GFX_printf(gfx, "%s", weekdays[day]);
-        
-        // Print Morning/Afternoon/Evening cells
-        GFX_setFont(gfx, u8g2_font_arial_11);
-        GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-        
-        const char* cell_texts[] = {
-            data->timetable.morning[day],
-            data->timetable.afternoon[day],
-            data->timetable.evening[day]
-        };
-        int16_t cell_x[] = {56, 168, 281};
-        int16_t cell_w[] = {112, 113, 113};
-        for (int c = 0; c < 3; c++) {
-            if (cell_texts[c][0] != '\0') {
-                DrawWrappedText(gfx, cell_texts[c], cell_x[c], cell_w[c], row_y, 28);
-            }
-        }
-    }
+    GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
+    GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+    uint16_t w_date = GFX_getUTF8Width(gfx, date_str);
+    int16_t date_x = 200 + (200 - w_date) / 2;
+    GFX_setCursor(gfx, date_x, 40);
+    GFX_printf(gfx, "%s", date_str);
 }
 
 void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data) {
@@ -1382,7 +1341,7 @@ void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data) {
     int16_t ph = (__HEAP_SIZE - 512) / (data->width / 8);
 
     uint16_t draw_width = (data->mode == MODE_NOTE_COUNTDOWN) ? 136 : data->width;
-    uint16_t draw_height = (data->mode == MODE_NOTE_COUNTDOWN) ? 300 : data->height;
+    uint16_t draw_height = (data->mode == MODE_NOTE_COUNTDOWN) ? 300 : ((data->mode == MODE_TIMETABLE) ? 50 : data->height);
     if (data->color == 2)
         GFX_begin_3c(&gfx, draw_width, draw_height, ph);
     else if (data->color == 3)
@@ -1390,8 +1349,8 @@ void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data) {
     else
         GFX_begin(&gfx, draw_width, draw_height, ph);
 
-    if (data->mode == MODE_TIMETABLE && data->update_header_only) {
-        GFX_setWindow(&gfx, 0, 0, draw_width, 57);
+    if (data->mode == MODE_TIMETABLE) {
+        GFX_setWindow(&gfx, 0, 0, draw_width, 50);
     } else if (data->mode == MODE_NOTE_COUNTDOWN) {
         GFX_setWindow(&gfx, 0, 0, 136, 300);
     }

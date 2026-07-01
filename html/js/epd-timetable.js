@@ -11,8 +11,8 @@
   // EPD canvas dimensions
   const FULL_W  = 400;
   const FULL_H  = 300;
-  const HDR_H   = 57;           // firmware draws header here
-  const TABLE_H = FULL_H; // 300px (full-screen image to avoid hardware partial window bugs) for table image
+  const HDR_H   = 50;           // firmware draws header here (50px height)
+  const TABLE_H = FULL_H - HDR_H; // 250px for table image
 
   // ── Spreadsheet state ────────────────────────────────────────
   // cells[r][c] = { text, font, size, color, align, bold, italic }
@@ -228,17 +228,71 @@
   };
 
   // ── Table operations ─────────────────────────────────────────
-  window.ttAddRow = function () {
+  window.ttInsertRowSel = function () {
+    const r = selectedCell ? selectedCell.r : cells.length - 1;
     const cols = cells[0] ? cells[0].length : 1;
     const newRow = [];
     for (let c = 0; c < cols; c++) newRow.push(defaultCell());
-    cells.push(newRow);
-    rowHeights.push(30);
+    cells.splice(r + 1, 0, newRow);
+    rowHeights.splice(r + 1, 0, 30);
+    saveState();
+    buildTableDOM();
+    renderPreview();
+    if (selectedCell) {
+      selectCell(r + 1, selectedCell.c);
+      const cellDom = document.querySelector(`.tt-cell[data-r="${r+1}"][data-c="${selectedCell.c}"]`);
+      if (cellDom) cellDom.focus();
+    }
+  };
+
+  window.ttDeleteRowSel = function () {
+    if (cells.length <= 1) return;
+    const r = selectedCell ? selectedCell.r : cells.length - 1;
+    cells.splice(r, 1);
+    rowHeights.splice(r, 1);
+    selectedCell = null;
     saveState();
     buildTableDOM();
     renderPreview();
   };
 
+  window.ttInsertColSel = function () {
+    const c = selectedCell ? selectedCell.c : cells[0].length - 1;
+    cells.forEach(row => {
+      row.splice(c + 1, 0, defaultCell());
+    });
+    colWidths.splice(c + 1, 0, 80);
+    const totalW = colWidths.reduce((a, b) => a + b, 0);
+    const scale = FULL_W / totalW;
+    colWidths = colWidths.map(w => Math.floor(w * scale));
+    saveState();
+    buildTableDOM();
+    renderPreview();
+    if (selectedCell) {
+      selectCell(selectedCell.r, c + 1);
+      const cellDom = document.querySelector(`.tt-cell[data-r="${selectedCell.r}"][data-c="${c+1}"]`);
+      if (cellDom) cellDom.focus();
+    }
+  };
+
+  window.ttDeleteColSel = function () {
+    if (!cells[0] || cells[0].length <= 1) return;
+    const c = selectedCell ? selectedCell.c : cells[0].length - 1;
+    cells.forEach(row => {
+      row.splice(c, 1);
+    });
+    colWidths.splice(c, 1);
+    const totalW = colWidths.reduce((a, b) => a + b, 0);
+    const scale = FULL_W / totalW;
+    colWidths = colWidths.map(w => Math.floor(w * scale));
+    selectedCell = null;
+    saveState();
+    buildTableDOM();
+    renderPreview();
+  };
+
+  // Deprecated end-actions kept for safety
+  window.ttAddRow = function () { window.ttInsertRowSel(); };
   window.ttDelRow = function (r) {
     if (cells.length <= 1) return;
     cells.splice(r, 1);
@@ -248,31 +302,11 @@
     buildTableDOM();
     renderPreview();
   };
-
-  window.ttAddCol = function () {
-    cells.forEach(row => row.push(defaultCell()));
-    const cols = cells[0].length;
-    colWidths.push(Math.floor(FULL_W / cols));
-    // redistribute widths
-    const totalW = colWidths.reduce((a, b) => a + b, 0);
-    const scale  = FULL_W / totalW;
-    colWidths = colWidths.map(w => Math.floor(w * scale));
-    saveState();
-    buildTableDOM();
-    renderPreview();
-  };
-
-  window.ttDelCol = function () {
-    if (!cells[0] || cells[0].length <= 1) return;
-    cells.forEach(row => row.pop());
-    colWidths.pop();
-    saveState();
-    buildTableDOM();
-    renderPreview();
-  };
+  window.ttAddCol = function () { window.ttInsertColSel(); };
+  window.ttDelCol = function () { window.ttDeleteColSel(); };
 
   // ── Canvas rendering ─────────────────────────────────────────
-    function renderTableCanvas() {
+  function renderTableCanvas() {
     const canvas = document.getElementById('tt-table-canvas');
     if (!canvas) return;
     canvas.width = FULL_W; canvas.height = TABLE_H;
@@ -289,16 +323,15 @@
     const xs = [0];
     for (let c = 0; c < cols; c++) xs.push(xs[c] + colWidths[c]*scaleX);
 
-    const tableActualH = FULL_H - HDR_H;
-    const totalRowH = rowHeights.reduce((a,b)=>a+b,0) || tableActualH;
-    const scaleY = tableActualH / totalRowH;
+    const totalRowH = rowHeights.reduce((a,b)=>a+b,0) || TABLE_H;
+    const scaleY = TABLE_H / totalRowH;
     const ys = [0];
     for (let r = 0; r < rows; r++) ys.push(ys[r] + rowHeights[r]*scaleY);
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const cell = cells[r][c];
-        const x = xs[c], y = ys[r] + HDR_H, w = xs[c+1]-xs[c], h = ys[r+1]-ys[r];
+        const x = xs[c], y = ys[r], w = xs[c+1]-xs[c], h = ys[r+1]-ys[r];
         ctx.strokeStyle = '#000'; ctx.lineWidth = 0.8;
         ctx.strokeRect(x+0.5, y+0.5, w-1, h-1);
 
@@ -321,7 +354,7 @@
       }
     }
     ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
-    ctx.strokeRect(0.5, HDR_H + 0.5, FULL_W-1, tableActualH-1);
+    ctx.strokeRect(0.5, 0.5, FULL_W-1, TABLE_H-1);
   }
 
   function wrapText(ctx, text, maxW) {
@@ -347,111 +380,34 @@
 
     // Header bg
     ctx.fillStyle = '#f8f8f8'; ctx.fillRect(0, 0, FULL_W, HDR_H);
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(0, HDR_H); ctx.lineTo(FULL_W, HDR_H); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(FULL_W/2, 0); ctx.lineTo(FULL_W/2, HDR_H); ctx.stroke();
 
     // Left: title + weather
-    ctx.fillStyle = '#cc0000'; ctx.font = 'bold 12px Arial';
+    ctx.fillStyle = '#cc0000'; ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText('THOI KHOA BIEU', 4, 5);
+    ctx.fillText('THỜI GIAN BIỂU', 6, 6);
     ctx.fillStyle = '#333'; ctx.font = '9px Arial';
-    ctx.fillText('Nhiet phong: 25°C', 4, 22);
-    ctx.fillText('T.tiet: 30°C - Nang', 4, 38);
+    ctx.fillText('Nhiệt phòng: 25°C', 6, 22);
+    ctx.fillText('T.tiết: 30°C - Nắng', 6, 36);
 
     // Right: clock + date
     const now = new Date();
     const hh = String(now.getHours()).padStart(2,'0');
     const mm = String(now.getMinutes()).padStart(2,'0');
-    ctx.fillStyle = '#000'; ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = '#000'; ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(hh+':'+mm, FULL_W*3/4, 6);
-    const wdN = ['CN','Hai','Ba','Tu','Nam','Sau','Bay'];
+    ctx.fillText(hh+':'+mm, FULL_W*3/4, 8);
+    const wdN = ['chủ nhật','thứ hai','thứ ba','thứ tư','thứ năm','thứ sáu','thứ bảy'];
     ctx.font = '9px Arial';
-    const ds = 'Thu '+wdN[now.getDay()]+' '+String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
-    ctx.fillText(ds, FULL_W*3/4, 42);
+    const ds = wdN[now.getDay()]+' ngày '+String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+    ctx.fillText(ds, FULL_W*3/4, 38);
 
     // Table
     const tc = document.getElementById('tt-table-canvas');
     if (tc) {
-      ctx.drawImage(tc, 0, HDR_H, FULL_W, FULL_H - HDR_H, 0, HDR_H, FULL_W, FULL_H - HDR_H);
-    }
-  }
-
-  function wrapText(ctx, text, maxW) {
-    const words = text.split(' ');
-    const lines = [];
-    let cur = '';
-    for (const w of words) {
-      const test = cur ? cur + ' ' + w : w;
-      if (ctx.measureText(test).width <= maxW) {
-        cur = test;
-      } else {
-        if (cur) lines.push(cur);
-        cur = w;
-      }
-    }
-    if (cur) lines.push(cur);
-    return lines.length ? lines : [''];
-  }
-
-  // ── Preview canvas (EPD header + table) ─────────────────────
-  function renderPreview() {
-    renderTableCanvas();
-
-    const preview = document.getElementById('tt-epd-preview');
-    if (!preview) return;
-    const ctx = preview.getContext('2d');
-    preview.width  = FULL_W;
-    preview.height = FULL_H;
-
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, FULL_W, FULL_H);
-
-    // Simulate header (firmware draws this; here just show placeholder)
-    ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(0, 0, FULL_W, HDR_H);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, HDR_H);
-    ctx.lineTo(FULL_W, HDR_H);
-    ctx.stroke();
-    // Vertical divider in header
-    ctx.beginPath();
-    ctx.moveTo(FULL_W / 2, 0);
-    ctx.lineTo(FULL_W / 2, HDR_H);
-    ctx.stroke();
-
-    // Left header text
-    ctx.fillStyle = '#cc0000';
-    ctx.font = 'bold 11px Arial';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('THỜI KHÓA BIỂU', 4, 6);
-    ctx.fillStyle = '#333';
-    ctx.font = '9px Arial';
-    ctx.fillText('Nhiệt phòng: 25°C', 4, 24);
-    ctx.fillText('T.tiết: 30°C - Nắng', 4, 38);
-
-    // Right header clock
-    const now = new Date();
-    const hh  = String(now.getHours()).padStart(2, '0');
-    const mm  = String(now.getMinutes()).padStart(2, '0');
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${hh}:${mm}`, FULL_W * 3 / 4, 8);
-    ctx.font = '9px Arial';
-    const wdNames = ['CN','Hai','Ba','Tư','Năm','Sáu','Bảy'];
-    const d = now;
-    ctx.fillText(`Thứ ${wdNames[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`, FULL_W * 3 / 4, 40);
-
-    // Draw table image below header
-    const tableCanvas = document.getElementById('tt-table-canvas');
-    if (tableCanvas) {
-      ctx.drawImage(tableCanvas, 0, HDR_H + 2);
+      ctx.drawImage(tc, 0, HDR_H);
     }
   }
 
@@ -496,7 +452,7 @@
     // INIT
     await write(EpdCmd.INIT);
 
-    // Write image to bottom region (0, 57, 400, 241)
+    // Write image to bottom region (0, 50, 400, 250)
     // Driver WriteRam detects mode=3 and sets correct window automatically
     if (ditherMode === 'threeColor') {
       const half  = Math.floor(processedData.length / 2);
@@ -516,9 +472,6 @@
     if (status) status.parentElement.style.display = 'none';
     alert('✅ Đã gửi Thời Khóa Biểu lên đồng hồ thành công!');
   };
-
-  // ── Column width resize support ──────────────────────────────
-  // (Basic: user can change via number input; future: drag resize)
 
   // ── Init ─────────────────────────────────────────────────────
   function init() {

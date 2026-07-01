@@ -257,6 +257,9 @@ void UC81xx_WriteRam(epd_model_t* epd, uint8_t cfg, uint8_t* data, uint8_t len) 
         if (epd_display_mode_get() == 4) {
             EPD_WriteCmd(UC81xx_PTIN);
             UC81xx_SetWindow(epd, 136, 0, 264, 300);
+        } else if (epd_display_mode_get() == 3) {
+            EPD_WriteCmd(UC81xx_PTIN);
+            UC81xx_SetWindow(epd, 0, 50, epd->width, epd->height - 50);
         } else {
             UC81xx_SetWindow(epd, 0, 0, epd->width, epd->height);
         }

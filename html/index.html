@@ -261,9 +261,12 @@
 									<option value="right">→ Phải</option>
 								</select>
 							</div>
-							<!-- Structure Control (Del Column) -->
-							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto;">
-								<button type="button" class="secondary btn-sm" onclick="window.ttDelCol()" title="Xóa cột cuối cùng" style="padding: 4px 8px; font-size: 0.85em;">✕ Cột</button>
+							<!-- Structure Control -->
+							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto; display: flex; gap: 4px;">
+								<button type="button" class="secondary btn-sm" onclick="window.ttInsertRowSel()" title="Chèn hàng bên dưới">＋ Hàng</button>
+								<button type="button" class="secondary btn-sm" onclick="window.ttDeleteRowSel()" title="Xóa hàng đang chọn">✕ Hàng</button>
+								<button type="button" class="secondary btn-sm" onclick="window.ttInsertColSel()" title="Chèn cột bên phải">＋ Cột</button>
+								<button type="button" class="secondary btn-sm" onclick="window.ttDeleteColSel()" title="Xóa cột đang chọn">✕ Cột</button>
 							</div>
 						</div>
 

@@ -98,6 +98,8 @@ void SSD16xx_WriteRam(epd_model_t* epd, uint8_t cfg, uint8_t* data, uint8_t len)
     if (begin) {
         if (epd_display_mode_get() == 4) {
             SSD16xx_SetWindow(epd, 136, 0, 264, 300);
+        } else if (epd_display_mode_get() == 3) {
+            SSD16xx_SetWindow(epd, 0, 50, epd->width, epd->height - 50);
         } else {
             SSD16xx_SetWindow(epd, 0, 0, epd->width, epd->height);
         }
