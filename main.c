@@ -101,7 +101,6 @@ static uint32_t                          m_timestamp = 1735689600;              
 APP_TIMER_DEF(m_clock_timer_id);                                                        /**< Clock timer. */
 APP_TIMER_DEF(m_led_timer_id);                                                          /**< LED off timer. */
 static nrf_drv_wdt_channel_id            m_wdt_channel_id;
-static uint32_t                          m_wdt_last_feed_time = 0;
 static uint32_t                          m_resetreas;
 // clang-format on
 
@@ -132,11 +131,7 @@ void set_timestamp(uint32_t timestamp) {
 
 // reload the wdt channel
 void app_feed_wdt(void) {
-    if (m_timestamp - m_wdt_last_feed_time >= 30) {
-        NRF_LOG_DEBUG("Feed WDT\n");
-        nrf_drv_wdt_channel_feed(m_wdt_channel_id);
-        m_wdt_last_feed_time = m_timestamp;
-    }
+    nrf_drv_wdt_channel_feed(m_wdt_channel_id);
 }
 
 #if defined(S112)

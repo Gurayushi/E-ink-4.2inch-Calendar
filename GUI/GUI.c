@@ -6,10 +6,14 @@
 #include "Lunar.h"
 #include "fonts.h"
 
+static void DrawWeatherIcon(Adafruit_GFX* gfx, uint8_t weather_id, int16_t x, int16_t y);
+static const char* GetWeatherDesc(uint8_t weather_id, uint8_t lang);
+
 static const int8_t sin_cos_lut_38[16] = { 0, 4, 8, 12, 15, 19, 22, 25, 28, 31, 33, 35, 36, 37, 38, 38 };
 static const int8_t sin_cos_lut_26[16] = { 0, 3, 5, 8, 11, 13, 15, 17, 19, 21, 23, 24, 25, 25, 26, 26 };
-static const int8_t sin_cos_lut_53[16] = { 0, 6, 11, 16, 22, 26, 31, 35, 39, 43, 46, 48, 50, 52, 53, 53 };
-static const int8_t sin_cos_lut_47[16] = { 0, 5, 10, 15, 19, 24, 28, 31, 35, 38, 41, 43, 45, 46, 47, 47 };
+static const int8_t sin_cos_lut_48[16] = { 0, 5, 10, 15, 20, 24, 28, 32, 36, 39, 42, 44, 46, 47, 48, 48 };
+static const int8_t sin_cos_lut_45[16] = { 0, 5, 9, 14, 18, 23, 26, 30, 33, 36, 39, 41, 43, 44, 45, 45 };
+static const int8_t sin_cos_lut_41[16] = { 0, 4, 9, 13, 17, 21, 24, 27, 30, 33, 36, 37, 39, 40, 41, 41 };
 
 static void get_lut_coords(const int8_t* lut, uint8_t idx_60, int16_t* x, int16_t* y) {
     if (idx_60 < 15) {
@@ -28,17 +32,36 @@ static void get_lut_coords(const int8_t* lut, uint8_t idx_60, int16_t* x, int16_
 }
 
 static void DrawAnalogClock(Adafruit_GFX* gfx, int16_t cx, int16_t cy, int16_t radius, tm_t* tm) {
-    // Face outline (single circle)
+    // Face outline (5 circles shifted by 1px to make a solid 2px thick circle without holes)
     GFX_drawCircle(gfx, cx, cy, radius, GFX_BLACK);
+    GFX_drawCircle(gfx, cx - 1, cy, radius, GFX_BLACK);
+    GFX_drawCircle(gfx, cx + 1, cy, radius, GFX_BLACK);
+    GFX_drawCircle(gfx, cx, cy - 1, radius, GFX_BLACK);
+    GFX_drawCircle(gfx, cx, cy + 1, radius, GFX_BLACK);
 
-    // Draw ticks: red for main hours (12, 3, 6, 9), black for others
-    for (int i = 0; i < 12; i++) {
+    // Draw ticks: pointing inwards.
+    // Multiples of 5: longer (radius 48 down to 41), color red.
+    // Others: shorter (radius 48 down to 45), color black.
+    for (int i = 0; i < 60; i++) {
         int16_t tx_o, ty_o, tx_i, ty_i;
-        get_lut_coords(sin_cos_lut_53, i * 5, &tx_o, &ty_o);
-        get_lut_coords(sin_cos_lut_47, i * 5, &tx_i, &ty_i);
-        uint16_t color = (i % 3 == 0) ? GFX_RED : GFX_BLACK;
-        GFX_drawLine(gfx, cx + tx_o, cy + ty_o, cx + tx_i, cy + ty_i, color);
+        get_lut_coords(sin_cos_lut_48, i, &tx_o, &ty_o);
+        if (i % 5 == 0) {
+            get_lut_coords(sin_cos_lut_41, i, &tx_i, &ty_i);
+            GFX_drawLine(gfx, cx + tx_o, cy + ty_o, cx + tx_i, cy + ty_i, GFX_RED);
+        } else {
+            get_lut_coords(sin_cos_lut_45, i, &tx_i, &ty_i);
+            GFX_drawLine(gfx, cx + tx_o, cy + ty_o, cx + tx_i, cy + ty_i, GFX_BLACK);
+        }
     }
+
+    // Draw 12, 3, 6, 9 (spaced further from ticks)
+    GFX_setFont(gfx, u8g2_font_arial_11);
+    GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+    uint16_t w_num;
+    w_num = GFX_getUTF8Width(gfx, "12"); GFX_setCursor(gfx, cx - w_num/2, cy - 28); GFX_printf(gfx, "12");
+    w_num = GFX_getUTF8Width(gfx, "3");  GFX_setCursor(gfx, cx + 32 - w_num/2, cy + 4); GFX_printf(gfx, "3");
+    w_num = GFX_getUTF8Width(gfx, "6");  GFX_setCursor(gfx, cx - w_num/2, cy + 37); GFX_printf(gfx, "6");
+    w_num = GFX_getUTF8Width(gfx, "9");  GFX_setCursor(gfx, cx - 32 - w_num/2, cy + 4); GFX_printf(gfx, "9");
 
     // Hands
     // Hours hand (thick red, 3 lines, moving continuously with minutes)
@@ -84,23 +107,80 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
             hours = total_hours % 24;
         }
 
-        // Estimate width of string: 68px base + 7px per digit
-        uint16_t w_time = 68 + 7; // base + at least 1 digit for hours
-        if (days >= 100) w_time += 21;
-        else if (days >= 10) w_time += 14;
-        else w_time += 7;
-        if (hours >= 10) w_time += 7;
+        char num_buf[16];
+        uint16_t w_num, w_word, w_total;
+        int16_t x_start;
 
-        GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-        GFX_setCursor(gfx, 68 - w_time / 2, 195);
-        GFX_printf(gfx, "%d NGÀY %d GIỜ", days, hours);
+        // Draw DAYS (centered, number in black, word "NGÀY" in red, bolded)
+        snprintf(num_buf, sizeof(num_buf), "%d ", days);
+        w_num = GFX_getUTF8Width(gfx, num_buf);
+        w_word = GFX_getUTF8Width(gfx, "NGÀY");
+        w_total = w_num + w_word;
+        x_start = 68 - w_total / 2;
 
+        for (int dx = 0; dx <= 1; dx++) {
+            GFX_setCursor(gfx, x_start + dx, 205);
+            GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+            GFX_printf(gfx, "%s", num_buf);
+            GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+            GFX_printf(gfx, "NGÀY");
+        }
+
+        // Draw HOURS (centered, number in black, word "GIỜ" in red, bolded)
+        snprintf(num_buf, sizeof(num_buf), "%d ", hours);
+        w_num = GFX_getUTF8Width(gfx, num_buf);
+        w_word = GFX_getUTF8Width(gfx, "GIỜ");
+        w_total = w_num + w_word;
+        x_start = 68 - w_total / 2;
+
+        for (int dx = 0; dx <= 1; dx++) {
+            GFX_setCursor(gfx, x_start + dx, 227);
+            GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+            GFX_printf(gfx, "%s", num_buf);
+            GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+            GFX_printf(gfx, "GIỜ");
+        }
+
+        // Draw event name
+        char safe_name[33];
+        memset(safe_name, 0, sizeof(safe_name));
+        for (int i = 0; i < 32; i++) {
+            char c = data->note_event.name[i];
+            if (c == 0 || (uint8_t)c == 0xFF) {
+                break;
+            }
+            safe_name[i] = c;
+        }
+        uint16_t w_name = GFX_getUTF8Width(gfx, safe_name);
+        GFX_setCursor(gfx, 68 - w_name / 2, 257);
         GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-        
-        uint16_t w_name = GFX_getUTF8Width(gfx, data->note_event.name);
-        GFX_setCursor(gfx, 68 - w_name / 2, 230);
-        GFX_printf(gfx, "%s", data->note_event.name);
+        GFX_printf(gfx, "%s", safe_name);
     }
+
+    // 3. Draw Room Temperature and Current Weather in between
+    uint8_t today_weather = data->weather.morning_weather;
+    if (tm->tm_hour >= 18) {
+        today_weather = data->weather.evening_weather;
+    } else if (tm->tm_hour >= 12) {
+        today_weather = data->weather.afternoon_weather;
+    }
+    
+    GFX_setFont(gfx, u8g2_font_arial_13);
+    GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+    // Print Room Temp
+    char temp_str[16];
+    snprintf(temp_str, sizeof(temp_str), "Phòng: %d°C", data->temperature);
+    uint16_t w_temp = GFX_getUTF8Width(gfx, temp_str);
+    GFX_setCursor(gfx, 68 - w_temp / 2, 145);
+    GFX_printf(gfx, "%s", temp_str);
+
+    // Draw Weather Icon & Text
+    DrawWeatherIcon(gfx, today_weather, 68 - 12, 153); // Icon is 24x24, center is 68 - 12
+    GFX_setFont(gfx, u8g2_font_arial_11);
+    const char* w_desc = GetWeatherDesc(today_weather, data->language);
+    uint16_t w_desc_len = GFX_getUTF8Width(gfx, w_desc);
+    GFX_setCursor(gfx, 68 - w_desc_len / 2, 186);
+    GFX_printf(gfx, "%s", w_desc);
 }
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))

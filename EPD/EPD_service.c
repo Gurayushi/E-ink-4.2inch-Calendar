@@ -31,7 +31,6 @@
 // #define EPD_CFG_DEFAULT {0x05, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x01, 0x07}
 #endif
 
-static bool m_clear_note_area = false;
 
 static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     epd_gui_update_event_t* event = (epd_gui_update_event_t*)p_event_data;
@@ -77,10 +76,6 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     uint32_t err_code = sd_ble_gap_device_name_get((uint8_t*)data.ssid, &dev_name_len);
     if (err_code == NRF_SUCCESS && dev_name_len > 0) data.ssid[dev_name_len] = '\0';
 
-    if (m_clear_note_area && data.mode == MODE_NOTE_COUNTDOWN) {
-        m_clear_note_area = false;
-        epd->drv->write_image(epd, NULL, NULL, 136, 0, 264, 300);
-    }
 
     DrawGUI(&data, (buffer_callback)epd->drv->write_image, epd);
     
@@ -96,9 +91,9 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     
     if (event->update_type != 2) {
         epd->drv->refresh(epd, partial);
+        epd->drv->sleep(epd);
+        nrf_delay_ms(200);  // for sleep
     }
-    epd->drv->sleep(epd);
-    nrf_delay_ms(200);  // for sleep
     EPD_GPIO_Uninit();
 
     app_feed_wdt();
@@ -132,9 +127,6 @@ static void on_disconnect(ble_epd_t* p_epd, ble_evt_t* p_ble_evt) {
 
 static void epd_update_display_mode(ble_epd_t* p_epd, display_mode_t mode) {
     if (p_epd->config.display_mode != mode) {
-        if (mode == MODE_NOTE_COUNTDOWN) {
-            m_clear_note_area = true;
-        }
         p_epd->config.display_mode = mode;
         epd_config_write(&p_epd->config);
     }

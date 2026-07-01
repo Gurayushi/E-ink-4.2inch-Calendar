@@ -1049,30 +1049,8 @@ int8_t GFX_getFontDescent(Adafruit_GFX* gfx) { return gfx->u8g2.font_info.descen
 
 int8_t GFX_getFontHeight(Adafruit_GFX* gfx) { return gfx->u8g2.font_info.ascent_A - gfx->u8g2.font_info.descent_g; }
 
-static bool is_vietnamese_uppercase_accented(uint16_t e) {
-    if ((e >= 0x00C0 && e <= 0x00C3) || 
-        (e >= 0x00C8 && e <= 0x00CA) || 
-        (e >= 0x00CC && e <= 0x00CD) || 
-        (e >= 0x00D2 && e <= 0x00D5) || 
-        (e >= 0x00D9 && e <= 0x00DA) || 
-        e == 0x00DD) {
-        return true;
-    }
-    if (e == 0x0102 || e == 0x0110 || e == 0x0168 || e == 0x01AF) {
-        return true;
-    }
-    if (e >= 0x1EA0 && e <= 0x1EF9) {
-        return (e % 2 == 0);
-    }
-    return false;
-}
-
 int16_t GFX_drawGlyph(Adafruit_GFX* gfx, int16_t x, int16_t y, uint16_t e) {
-    int16_t offset_y = 0;
-    if (is_vietnamese_uppercase_accented(e)) {
-        offset_y = -2;
-    }
-    return u8g2_DrawGlyph(&gfx->u8g2, x, y + offset_y, e);
+    return u8g2_DrawGlyph(&gfx->u8g2, x, y, e);
 }
 
 int16_t GFX_drawStr(Adafruit_GFX* gfx, int16_t x, int16_t y, const char* s) {
@@ -1127,11 +1105,7 @@ int16_t GFX_drawUTF8(Adafruit_GFX* gfx, int16_t x, int16_t y, const char* str) {
         if (e == 0x0ffff) break;
         str++;
         if (e != 0x0fffe) {
-            int16_t offset_y = 0;
-            if (is_vietnamese_uppercase_accented(e)) {
-                offset_y = -2;
-            }
-            delta = u8g2_DrawGlyph(&gfx->u8g2, x, y + offset_y, e);
+            delta = u8g2_DrawGlyph(&gfx->u8g2, x, y, e);
 
             switch (gfx->u8g2.font_decode.dir) {
                 case 0:
@@ -1191,11 +1165,7 @@ size_t GFX_print(Adafruit_GFX* gfx, const char c) {
     } else if (e == '\r') {
         gfx->tx = 0;
     } else if (e < 0x0fffe) {
-        int16_t offset_y = 0;
-        if (is_vietnamese_uppercase_accented(e)) {
-            offset_y = -2;
-        }
-        delta = u8g2_DrawGlyph(&gfx->u8g2, gfx->tx, gfx->ty + offset_y, e);
+        delta = u8g2_DrawGlyph(&gfx->u8g2, gfx->tx, gfx->ty, e);
         switch (gfx->u8g2.font_decode.dir) {
             case 0:
                 gfx->tx += delta;
