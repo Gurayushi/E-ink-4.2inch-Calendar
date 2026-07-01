@@ -134,7 +134,7 @@ async function setDriver() {
   await write(EpdCmd.INIT, document.getElementById("epddriver").value);
 }
 
-async function syncTime(mode) {
+async function syncTime(mode, skipRefresh = false) {
   if (mode === 2) {
     if (!await showCustomConfirm(i18n[currentLang].clock_mode_warning)) return;
   }
@@ -145,7 +145,8 @@ async function syncTime(mode) {
     (timestamp >> 8) & 0xFF,
     timestamp & 0xFF,
     -(new Date().getTimezoneOffset() / 60),
-    mode
+    mode,
+    skipRefresh ? 0 : 1
   ]);
   if (await write(EpdCmd.SET_TIME, data)) {
     addLog(i18n[currentLang].time_synced);
@@ -380,6 +381,9 @@ function handleNotify(value, idx) {
     epdpins.value = bytes2hex(data.slice(0, 7));
     if (data.length > 10) epdpins.value += bytes2hex(data.slice(10, 11));
     epddriver.value = bytes2hex(data.slice(7, 8));
+    if (data.length > 11) {
+      window.currentDisplayMode = data[11];
+    }
     updateDitcherOptions();
     
     // Update local language selector if device has it configured

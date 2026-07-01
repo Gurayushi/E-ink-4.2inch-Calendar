@@ -43,6 +43,7 @@ static void UC81xx_SetWindow(epd_model_t* epd, uint16_t x, uint16_t y, uint16_t 
 void UC81xx_Refresh(epd_model_t* epd, bool partial) {
     EPD_DEBUG("refresh begin");
 
+    EPD_WriteCmd(UC81xx_PTOUT);
     UC81xx_SetWindow(epd, 0, 0, epd->width, epd->height);
 
     EPD_WriteCmd(UC81xx_DRF);
@@ -247,10 +248,19 @@ void UC81xx_WriteImage(epd_model_t* epd, uint8_t* black, uint8_t* color, uint16_
     }
 }
 
+extern uint8_t epd_display_mode_get(void);
+
 void UC81xx_WriteRam(epd_model_t* epd, uint8_t cfg, uint8_t* data, uint8_t len) {
     bool begin = (cfg >> 4) == 0x00;
     bool black = (cfg & 0x0F) == 0x0F;
-    if (begin && black) UC81xx_SetWindow(epd, 0, 0, epd->width, epd->height);
+    if (begin) {
+        if (epd_display_mode_get() == 4) {
+            EPD_WriteCmd(UC81xx_PTIN);
+            UC81xx_SetWindow(epd, 136, 0, 264, 300);
+        } else {
+            UC81xx_SetWindow(epd, 0, 0, epd->width, epd->height);
+        }
+    }
     switch (epd->ic) {
         case DRV_IC_UC8159:
         case DRV_IC_JD79665:

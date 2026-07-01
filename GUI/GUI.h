@@ -9,6 +9,7 @@ typedef enum {
     MODE_CALENDAR = 1,
     MODE_CLOCK = 2,
     MODE_TIMETABLE = 3,
+    MODE_NOTE_COUNTDOWN = 4,
 } display_mode_t;
 
 typedef struct {
@@ -32,6 +33,11 @@ typedef struct {
 } weather_data_t;
 
 typedef struct {
+    uint32_t target_timestamp;
+    char name[32];
+} note_event_t;
+
+typedef struct {
     display_mode_t mode;
     uint16_t color;
     uint16_t width;
@@ -44,6 +50,8 @@ typedef struct {
     char ssid[20];
     weather_data_t weather;
     timetable_data_t timetable;
+    note_event_t note_event;
+    bool update_header_only;
 } gui_data_t;
 
 void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data);

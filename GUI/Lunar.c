@@ -349,8 +349,8 @@ mday = MaxDay - mday + JQdate;
 return JQ;
 }
 
-uint32_t SEC_PER_YR[2] = {31536000, 31622400};  // 闰年和非闰年的秒数
-uint32_t SEC_PER_MT[2][12] = {
+static const uint32_t SEC_PER_YR[2] = {31536000, 31622400};  // 闰年和非闰年的秒数
+static const uint32_t SEC_PER_MT[2][12] = {
 {2678400, 2419200, 2678400, 2592000, 2678400, 2592000, 2678400, 2678400, 2592000, 2678400, 2592000, 2678400},
 {2678400, 2505600, 2678400, 2592000, 2678400, 2592000, 2678400, 2678400, 2592000, 2678400, 2592000, 2678400},
 };
@@ -382,7 +382,7 @@ unsigned short year)
 */
 unsigned char day_of_week_get(unsigned char month, unsigned char day, unsigned short year) {
 /* Month should be a number 0 to 11, Day should be a number 1 to 31 */
-static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
 year -= (uint8_t)(month < 3);
 return (year + year / 4 - year / 100 + year / 400 + t[month - 1] + day) % 7;
 }
@@ -428,7 +428,7 @@ result->tm_wday = day_of_week_get(result->tm_mon + 1, result->tm_mday, result->t
 result->tm_year -= YEAR0;
 }
 
-uint8_t map[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static const uint8_t map[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 /*
 获取一个月最后一天值

@@ -90,10 +90,18 @@ void SSD16xx_WriteImage(epd_model_t* epd, uint8_t* black, uint8_t* color, uint16
     }
 }
 
+extern uint8_t epd_display_mode_get(void);
+
 void SSD16xx_WriteRam(epd_model_t* epd, uint8_t cfg, uint8_t* data, uint8_t len) {
     bool begin = (cfg >> 4) == 0x00;
     bool black = (cfg & 0x0F) == 0x0F;
-    if (begin && black) SSD16xx_SetWindow(epd, 0, 0, epd->width, epd->height);
+    if (begin) {
+        if (epd_display_mode_get() == 4) {
+            SSD16xx_SetWindow(epd, 136, 0, 264, 300);
+        } else {
+            SSD16xx_SetWindow(epd, 0, 0, epd->width, epd->height);
+        }
+    }
     if (begin) {
         if (epd->color == COLOR_BWR)
             EPD_WriteCmd(black ? SSD16xx_WRITE_RAM1 : SSD16xx_WRITE_RAM2);

@@ -21,6 +21,8 @@ typedef struct {
     uint8_t sleep_start[7][4];
     uint8_t sleep_end[7][4];
     uint8_t always_run_days;
+    uint32_t event_timestamp;
+    char event_name[32];
 } epd_config_t;
 
 #define EPD_CONFIG_SIZE (sizeof(epd_config_t) / sizeof(uint8_t))

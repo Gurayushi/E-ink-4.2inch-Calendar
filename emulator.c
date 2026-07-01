@@ -228,13 +228,15 @@ void SaveBitmapCallback(void* user_data, uint8_t* black, uint8_t* color, uint16_
         memset(full_color, 255, 15000);
     }
     
-    int bytesPerRow = (w + 7) / 8;
-    int pageSize = h * bytesPerRow;
-    int offset = y * bytesPerRow;
-    
-    if (offset + pageSize <= 15000) {
-        if (black && full_black) memcpy(full_black + offset, black, pageSize);
-        if (color && full_color) memcpy(full_color + offset, color, pageSize);
+    int destStride = 400 / 8;
+    int srcStride = (w + 7) / 8;
+    for (int row = 0; row < h; row++) {
+        int srcOffset = row * srcStride;
+        int destOffset = (y + row) * destStride + (x / 8);
+        if (destOffset + srcStride <= 15000) {
+            if (black && full_black) memcpy(full_black + destOffset, black + srcOffset, srcStride);
+            if (color && full_color) memcpy(full_color + destOffset, color + srcOffset, srcStride);
+        }
     }
     
     if (y + h >= 300) {
@@ -487,6 +489,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         strcpy(data.timetable.afternoon[5], "Mỹ thuật");
         
         DrawGUI(&data, SaveBitmapCallback, "timetable.bmp");
+        
+        // Populate and save note image
+        data.mode = MODE_NOTE_COUNTDOWN;
+        data.note_event.target_timestamp = data.timestamp + 86400 * 3 + 3600 * 5; // 3 days 5 hours from now
+        strcpy(data.note_event.name, "Sinh nhật Admin");
+        DrawGUI(&data, SaveBitmapCallback, "note.bmp");
+        
         return 0;
     }
 

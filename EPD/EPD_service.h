@@ -74,6 +74,7 @@ enum EPD_CMDS {
     EPD_CMD_SET_WEATHER = 0x22,    /** < set weather data for 3 days */
     EPD_CMD_SET_TIMETABLE = 0x23,  /** < set timetable data day by day */
     EPD_CMD_SET_SLEEP_SCHEDULE = 0x24, /** < set sleep schedule and overrides */
+    EPD_CMD_SET_EVENT = 0x25,          /** < set event countdown */
 
     EPD_CMD_WRITE_IMAGE = 0x30, /** < write image data to EPD ram */
 
@@ -107,7 +108,7 @@ typedef struct {
 typedef struct {
     ble_epd_t* p_epd;
     uint32_t timestamp;
-    bool force_update;
+    uint8_t update_type; // 0: normal, 1: force, 2: draw only (no refresh)
 } epd_gui_update_event_t;
 
 #define EPD_GUI_SCHD_EVENT_DATA_SIZE sizeof(epd_gui_update_event_t)
@@ -154,7 +155,7 @@ void ble_epd_on_ble_evt(ble_epd_t* p_epd, ble_evt_t* p_ble_evt);
  */
 uint32_t ble_epd_string_send(ble_epd_t* p_epd, uint8_t* p_string, uint16_t length);
 
-void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, bool force_update);
+void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, uint8_t update_type);
 
 #endif  // EPD_BLE_H__
 

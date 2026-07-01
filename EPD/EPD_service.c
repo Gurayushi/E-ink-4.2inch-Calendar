@@ -59,7 +59,17 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
         .voltage = EPD_ReadVoltage(),
         .weather = p_epd->weather,
         .timetable = p_epd->timetable,
+        .note_event = {
+            .target_timestamp = p_epd->config.event_timestamp,
+            .name = {0}
+        },
+        .update_header_only = true
     };
+    int i_evt;
+    for (i_evt = 0; i_evt < 31 && p_epd->config.event_name[i_evt] != '\0'; i_evt++) {
+        data.note_event.name[i_evt] = p_epd->config.event_name[i_evt];
+    }
+    data.note_event.name[i_evt] = '\0';
 
     uint16_t dev_name_len = sizeof(data.ssid);
     uint32_t err_code = sd_ble_gap_device_name_get((uint8_t*)data.ssid, &dev_name_len);
@@ -70,14 +80,16 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     bool partial = false;
     // Perform partial refresh only for Clock or Timetable mode updates that are NOT the top of the hour (minute != 0),
     // and NOT a forced update (e.g. from BLE or bootup)
-    if (!event->force_update && 
-        (p_epd->config.display_mode == MODE_CLOCK || p_epd->config.display_mode == MODE_TIMETABLE)) {
+    if (event->update_type != 1 && 
+        (p_epd->config.display_mode == MODE_CLOCK || p_epd->config.display_mode == MODE_TIMETABLE || p_epd->config.display_mode == MODE_NOTE_COUNTDOWN)) {
         if ((event->timestamp / 60) % 60 != 0) {
             partial = true;
         }
     }
     
-    epd->drv->refresh(epd, partial);
+    if (event->update_type != 2) {
+        epd->drv->refresh(epd, partial);
+    }
     epd->drv->sleep(epd);
     nrf_delay_ms(200);  // for sleep
     EPD_GPIO_Uninit();
@@ -183,8 +195,12 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             break;
 
         case EPD_CMD_REFRESH:
-            epd_update_display_mode(p_epd, MODE_PICTURE);
-            if (p_epd->epd) p_epd->epd->drv->refresh(p_epd->epd, false);
+            if (p_epd->config.display_mode != MODE_TIMETABLE && p_epd->config.display_mode != MODE_NOTE_COUNTDOWN) {
+                epd_update_display_mode(p_epd, MODE_PICTURE);
+                if (p_epd->epd) p_epd->epd->drv->refresh(p_epd->epd, false);
+            } else {
+                ble_epd_on_timer(p_epd, timestamp(), 1);
+            }
             break;
 
         case EPD_CMD_SLEEP:
@@ -200,10 +216,23 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             uint32_t timestamp = (p_data[1] << 24) | (p_data[2] << 16) | (p_data[3] << 8) | p_data[4];
             timestamp += (length > 5 ? (int8_t)p_data[5] : 8) * 60 * 60;  // timezone
             set_timestamp(timestamp);
+            
+            uint8_t update_type = 1;
             if (length > 6 && p_data[6] != 255) {
                 epd_update_display_mode(p_epd, (display_mode_t)p_data[6]);
+                // Byte 7 (if present) is a skip_refresh flag from phone:
+                //   0 = skip refresh (phone is about to send image data)
+                //   1 or absent = force full refresh
+                bool skip_refresh = (length > 7 && p_data[7] == 0);
+                if (skip_refresh && 
+                    (p_epd->config.display_mode == MODE_NOTE_COUNTDOWN ||
+                     p_epd->config.display_mode == MODE_TIMETABLE)) {
+                    update_type = 2; // draw only, no screen refresh – phone sends image next
+                }
             }
-            epd_request_refresh();
+            if (p_epd->config.display_mode != MODE_PICTURE) {
+                ble_epd_on_timer(p_epd, timestamp, update_type);
+            }
         } break;
 
         case EPD_CMD_SET_WEEK_START:
@@ -242,9 +271,9 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
                 memcpy(p_epd->weather.city, &p_data[17], city_len);
             }
             
-            // Trigger a display update if the screen is in clock or timetable mode
-            if (p_epd->config.display_mode == MODE_CLOCK || p_epd->config.display_mode == MODE_TIMETABLE) {
-                epd_request_refresh();
+            // Trigger a display update if the screen is in clock mode
+            if (p_epd->config.display_mode == MODE_CLOCK) {
+                ble_epd_on_timer(p_epd, timestamp(), 1);
             }
             break;
         }
@@ -280,7 +309,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             epd_timetable_write(&p_epd->timetable);
 
             if (day == 5 && p_epd->config.display_mode == MODE_TIMETABLE) {
-                epd_request_refresh();
+                ble_epd_on_timer(p_epd, timestamp(), 1);
             }
             break;
         }
@@ -307,7 +336,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             
             epd_config_write(&p_epd->config);
             
-            ble_epd_on_timer(p_epd, timestamp(), false);
+            ble_epd_on_timer(p_epd, timestamp(), 0);
             break;
         }
 
@@ -323,6 +352,22 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             memcpy(&p_epd->config, &p_data[1], (length - 1 > EPD_CONFIG_SIZE) ? EPD_CONFIG_SIZE : length - 1);
             epd_config_write(&p_epd->config);
             break;
+
+        case EPD_CMD_SET_EVENT: {
+            if (length < 5) break;
+            p_epd->config.event_timestamp = ((uint32_t)p_data[1] << 24) | ((uint32_t)p_data[2] << 16) | ((uint32_t)p_data[3] << 8) | p_data[4];
+            uint8_t name_len = (length > 5) ? (length - 5) : 0;
+            if (name_len > 31) name_len = 31;
+            int i;
+            for (i = 0; i < name_len; i++) {
+                p_epd->config.event_name[i] = p_data[5 + i];
+            }
+            p_epd->config.event_name[i] = '\0';
+            epd_config_write(&p_epd->config);
+            if (p_epd->config.display_mode != MODE_NOTE_COUNTDOWN || p_epd->conn_handle == BLE_CONN_HANDLE_INVALID) {
+                ble_epd_on_timer(p_epd, timestamp(), 1);
+            }
+        } break;
 
         case EPD_CMD_SYS_SLEEP:
             sleep_mode_enter();
@@ -456,8 +501,11 @@ void ble_epd_sleep_prepare(ble_epd_t* p_epd) {
     }
 }
 
+static ble_epd_t* gp_epd = NULL;
+
 uint32_t ble_epd_init(ble_epd_t* p_epd) {
     if (p_epd == NULL) return NRF_ERROR_NULL;
+    gp_epd = p_epd;
 
     // Initialize the service structure.
     p_epd->max_data_len = BLE_EPD_MAX_DATA_LEN;
@@ -522,8 +570,8 @@ uint32_t ble_epd_string_send(ble_epd_t* p_epd, uint8_t* p_string, uint16_t lengt
     return sd_ble_gatts_hvx(p_epd->conn_handle, &hvx_params);
 }
 
-void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, bool force_update) {
-    if (!force_update && p_epd->config.display_mode != MODE_PICTURE) {
+void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, uint8_t update_type) {
+    if (update_type != 1 && p_epd->config.display_mode != MODE_PICTURE) {
         tm_t tm;
         transformTime(timestamp, &tm);
         
@@ -556,10 +604,15 @@ void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, bool force_update) {
         }
     }
 
-    // Update calendar/timetable on 00:00:00, clock on every minute
-    if (force_update || ((p_epd->config.display_mode == MODE_CALENDAR || p_epd->config.display_mode == MODE_TIMETABLE) && timestamp % 86400 == 0) ||
-        (p_epd->config.display_mode == MODE_CLOCK && timestamp % 60 == 0)) {
-        epd_gui_update_event_t event = {p_epd, timestamp, force_update};
+    // Update calendar on 00:00:00, clock on every minute
+    if (update_type == 1 || update_type == 2 || 
+        (p_epd->config.display_mode == MODE_CALENDAR && timestamp % 86400 == 0) ||
+        (p_epd->config.display_mode > MODE_CALENDAR && timestamp % 60 == 0)) {
+        epd_gui_update_event_t event = {p_epd, timestamp, update_type};
         app_sched_event_put(&event, sizeof(epd_gui_update_event_t), epd_gui_update);
     }
+}
+
+uint8_t epd_display_mode_get(void) {
+    return gp_epd ? gp_epd->config.display_mode : 0;
 }

@@ -1,9 +1,107 @@
 #include "GUI.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "Lunar.h"
 #include "fonts.h"
+
+static const int8_t sin_cos_lut_38[16] = { 0, 4, 8, 12, 15, 19, 22, 25, 28, 31, 33, 35, 36, 37, 38, 38 };
+static const int8_t sin_cos_lut_26[16] = { 0, 3, 5, 8, 11, 13, 15, 17, 19, 21, 23, 24, 25, 25, 26, 26 };
+static const int8_t sin_cos_lut_53[16] = { 0, 6, 11, 16, 22, 26, 31, 35, 39, 43, 46, 48, 50, 52, 53, 53 };
+static const int8_t sin_cos_lut_47[16] = { 0, 5, 10, 15, 19, 24, 28, 31, 35, 38, 41, 43, 45, 46, 47, 47 };
+
+static void get_lut_coords(const int8_t* lut, uint8_t idx_60, int16_t* x, int16_t* y) {
+    if (idx_60 < 15) {
+        *x = lut[idx_60];
+        *y = -lut[15 - idx_60];
+    } else if (idx_60 < 30) {
+        *x = lut[30 - idx_60];
+        *y = lut[idx_60 - 15];
+    } else if (idx_60 < 45) {
+        *x = -lut[idx_60 - 30];
+        *y = lut[45 - idx_60];
+    } else {
+        *x = -lut[60 - idx_60];
+        *y = -lut[idx_60 - 45];
+    }
+}
+
+static void DrawAnalogClock(Adafruit_GFX* gfx, int16_t cx, int16_t cy, int16_t radius, tm_t* tm) {
+    // Face outline (single circle)
+    GFX_drawCircle(gfx, cx, cy, radius, GFX_BLACK);
+
+    // Draw ticks: red for main hours (12, 3, 6, 9), black for others
+    for (int i = 0; i < 12; i++) {
+        int16_t tx_o, ty_o, tx_i, ty_i;
+        get_lut_coords(sin_cos_lut_53, i * 5, &tx_o, &ty_o);
+        get_lut_coords(sin_cos_lut_47, i * 5, &tx_i, &ty_i);
+        uint16_t color = (i % 3 == 0) ? GFX_RED : GFX_BLACK;
+        GFX_drawLine(gfx, cx + tx_o, cy + ty_o, cx + tx_i, cy + ty_i, color);
+    }
+
+    // Hands
+    // Hours hand (thick red, 3 lines, moving continuously with minutes)
+    int16_t hx, hy;
+    uint8_t hour_idx = (tm->tm_hour % 12) * 5 + tm->tm_min / 12;
+    get_lut_coords(sin_cos_lut_26, hour_idx, &hx, &hy);
+    GFX_drawLine(gfx, cx, cy, cx + hx, cy + hy, GFX_RED);
+    GFX_drawLine(gfx, cx - 1, cy, cx - 1 + hx, cy + hy, GFX_RED);
+    GFX_drawLine(gfx, cx + 1, cy, cx + 1 + hx, cy + hy, GFX_RED);
+
+    // Minute hand (thin black, 1 line)
+    int16_t mx, my;
+    get_lut_coords(sin_cos_lut_38, tm->tm_min % 60, &mx, &my);
+    GFX_drawLine(gfx, cx, cy, cx + mx, cy + my, GFX_BLACK);
+
+    // Center hub
+    GFX_fillCircle(gfx, cx, cy, 3, GFX_BLACK);
+}
+
+static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui_data_t* data) {
+    // Single-pixel border (width reduced to 124 for 136px byte boundary)
+    GFX_drawRect(gfx, 6, 6, 124, 288, GFX_BLACK);
+
+    // 1. Draw Analog Clock in Left Half (cx = 68, radius = 50)
+    DrawAnalogClock(gfx, 68, 75, 50, tm);
+
+    // 2. Draw Countdown Event in Left Half (centered at 68)
+    GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
+    GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+
+    if (data->note_event.target_timestamp == 0 || data->note_event.target_timestamp == 0xFFFFFFFF) {
+        uint16_t w = GFX_getUTF8Width(gfx, "Không có sự kiện");
+        GFX_setCursor(gfx, 68 - w / 2, 200);
+        GFX_printf(gfx, "Không có sự kiện");
+    } else {
+        uint32_t now_ts = data->timestamp;
+        int32_t diff = (int32_t)data->note_event.target_timestamp - (int32_t)now_ts;
+        int32_t days = 0;
+        int32_t hours = 0;
+        if (diff > 0) {
+            int32_t total_hours = diff / 3600;
+            days = total_hours / 24;
+            hours = total_hours % 24;
+        }
+
+        // Estimate width of string: 68px base + 7px per digit
+        uint16_t w_time = 68 + 7; // base + at least 1 digit for hours
+        if (days >= 100) w_time += 21;
+        else if (days >= 10) w_time += 14;
+        else w_time += 7;
+        if (hours >= 10) w_time += 7;
+
+        GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+        GFX_setCursor(gfx, 68 - w_time / 2, 195);
+        GFX_printf(gfx, "%d NGÀY %d GIỜ", days, hours);
+
+        GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+        
+        uint16_t w_name = GFX_getUTF8Width(gfx, data->note_event.name);
+        GFX_setCursor(gfx, 68 - w_name / 2, 230);
+        GFX_printf(gfx, "%s", data->note_event.name);
+    }
+}
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define GFX_printf_styled(gfx, fg, bg, font, ...) \
@@ -62,9 +160,17 @@ static bool GetFestival(uint16_t year, uint8_t mon, uint8_t day, uint8_t week, s
     // 除夕：春节前一天（12/29 或 12/30），12/30 已在上面判断
     if (Lunar->Month == 12 && Lunar->Date == 29) {
         struct Lunar_Date nextLunar;
-        struct devtm tm = {year, mon, day, 0, 0, 0, week};
-        transformTime(transformTimeStruct(&tm) + 86400, &tm);
-        LUNAR_SolarToLunar(&nextLunar, tm.tm_year + YEAR0, tm.tm_mon + 1, tm.tm_mday);
+        uint8_t next_d = day + 1;
+        uint8_t next_m = mon;
+        uint16_t next_y = year;
+        if (next_d > thisMonthMaxDays(year, mon)) {
+            next_d = 1;
+            if (++next_m == 13) {
+                next_m = 1;
+                next_y++;
+            }
+        }
+        LUNAR_SolarToLunar(&nextLunar, next_y, next_m, next_d);
         if (nextLunar.Month == 1 && nextLunar.Date == 1) {
             strcpy(festival, "Giao thừa");
             return true;
@@ -125,7 +231,7 @@ static void DrawBattery(Adafruit_GFX* gfx, int16_t x, int16_t y, uint8_t iw, uin
     x -= iw;
     uint8_t level = batt_cal(voltage);
     GFX_setFont(gfx, u8g2_font_arial_11);
-    GFX_setCursor(gfx, x - GFX_getUTF8Width(gfx, "3.2V") - 2, y + 9);
+    GFX_setCursor(gfx, x - 22 - 2, y + 9);
     GFX_printf(gfx, "%d.%dV", voltage / 1000, (voltage % 1000) / 100);
     GFX_fillRect(gfx, x, y, iw, 10, GFX_WHITE);
     GFX_drawRect(gfx, x, y, iw, 10, GFX_BLACK);
@@ -133,32 +239,7 @@ static void DrawBattery(Adafruit_GFX* gfx, int16_t x, int16_t y, uint8_t iw, uin
     GFX_fillRect(gfx, x + 2, y + 2, 16 * level / 100, 6, GFX_BLACK);
 }
 
-static uint8_t GetWeekOfYear(uint8_t year, uint8_t mon, uint8_t mday, uint8_t wday) {
-    int y = year + 1900;
-    bool is_leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
-    static const uint16_t offsets[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-    int doy = offsets[mon] + mday;
-    if (is_leap && mon > 1) {
-        doy++;
-    }
-    int iso_wday = (wday == 0) ? 7 : wday;
-    int week = (doy - iso_wday + 10) / 7;
-    if (week < 1) {
-        week = 52;
-        int prev_y = y - 1;
-        bool prev_leap = (prev_y % 4 == 0 && prev_y % 100 != 0) || (prev_y % 400 == 0);
-        int jan1_wday = (iso_wday - doy % 7 + 7) % 7 + 1;
-        if (jan1_wday == 5 || (jan1_wday == 6 && prev_leap)) {
-            week = 53;
-        }
-    } else if (week > 52) {
-        int Dec31_wday = (iso_wday + (31 - mday) % 7) % 7 + 1;
-        if (Dec31_wday < 4) {
-            week = 1;
-        }
-    }
-    return week;
-}
+// GetWeekOfYear removed to save flash space
 
 static void DrawDateHeader(Adafruit_GFX* gfx, int16_t x, int16_t y, tm_t* tm, struct Lunar_Date* Lunar,
                            gui_data_t* data) {
@@ -197,8 +278,8 @@ static void DrawDateHeader(Adafruit_GFX* gfx, int16_t x, int16_t y, tm_t* tm, st
     GFX_printf(gfx, "NĂM");
 
     // 4. Draw Can Chi year in black
-    uint8_t year_stem = LUNAR_GetStem(Lunar);
-    uint8_t year_branch = LUNAR_GetBranch(Lunar);
+    uint8_t year_stem = Lunar->Year % 10;
+    uint8_t year_branch = Lunar->Year % 12;
     tx = gfx->tx;
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
     GFX_setCursor(gfx, tx, year_y);
@@ -367,7 +448,7 @@ static void DrawMonthDays(Adafruit_GFX* gfx, int16_t x, int16_t y, tm_t* tm, str
     uint8_t day_stem = ((1 + days) % 10 + 10) % 10;
     uint8_t day_branch = ((9 + days) % 12 + 12) % 12;
 
-    uint8_t year_stem = LUNAR_GetStem(&currentLunar);
+    uint8_t year_stem = currentLunar.Year % 10;
 
     uint8_t month_stem = (month1_stem_map[year_stem] + (currentLunar.Month - 1)) % 10;
     uint8_t month_branch = (6 + (currentLunar.Month - 1)) % 12;
@@ -656,7 +737,6 @@ static void DrawTime(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y, uint16_t
 static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui_data_t* data) {
     // 1. Draw outer border & grid dividers
     GFX_drawRect(gfx, 6, 6, 388, 288, GFX_BLACK);
-    GFX_drawRect(gfx, 7, 7, 386, 286, GFX_BLACK);
     
     // Grid Dividers
     GFX_drawFastHLine(gfx, 6, 112, 388, GFX_BLACK); // Horizontal main divider
@@ -696,7 +776,6 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     uint16_t w_bat = 26;
     uint16_t h_bat = 13;
     GFX_drawRect(gfx, x_bat, y_bat, w_bat, h_bat, GFX_BLACK);
-    GFX_drawRect(gfx, x_bat + 1, y_bat + 1, w_bat - 2, h_bat - 2, GFX_BLACK);
     GFX_fillRect(gfx, x_bat + w_bat, y_bat + 3, 2, h_bat - 6, GFX_BLACK);
     uint8_t bars = (batt_pct + 12) / 25;
     for (int i = 0; i < bars; i++) {
@@ -704,25 +783,19 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     }
     
     // Voltage text below battery icon
-    char volt_buf[16];
-    snprintf(volt_buf, sizeof(volt_buf), "%d.%02dV", data->voltage / 1000, (data->voltage % 1000) / 10);
     GFX_setFont(gfx, u8g2_font_arial_11);
-    uint16_t w_volt = GFX_getUTF8Width(gfx, volt_buf);
     GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-    GFX_setCursor(gfx, 230 + (82 - w_volt) / 2, 72);
-    GFX_printf(gfx, "%s", volt_buf);
+    GFX_setCursor(gfx, 230 + (82 - 28) / 2, 72);
+    GFX_printf(gfx, "%d.%02dV", data->voltage / 1000, (data->voltage % 1000) / 10);
     
     // Temperature + Thermometer (drawn on right side of bottom row)
-    char temp_str[16];
-    snprintf(temp_str, sizeof(temp_str), "%d°C", data->temperature);
     GFX_setFont(gfx, u8g2_font_arial_13);
-    uint16_t w_temp = GFX_getUTF8Width(gfx, temp_str);
-    uint16_t total_w = w_temp + 4 + 10;
+    uint16_t total_w = 26 + 4 + 10;
     uint16_t start_x = 312 + (82 - total_w) / 2;
     GFX_setCursor(gfx, start_x, 52);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-    GFX_printf(gfx, "%s", temp_str);
-    DrawThermometer(gfx, start_x + w_temp + 4, 38);
+    GFX_printf(gfx, "%d°C", data->temperature);
+    DrawThermometer(gfx, start_x + 26 + 4, 38);
     
     // Room Temp label below temp text
     GFX_setFont(gfx, u8g2_font_arial_11);
@@ -758,14 +831,14 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     }
     
     GFX_setTextColor(gfx, GFX_WHITE, GFX_BLACK);
-    GFX_setCursor(gfx, 6 + (224 - GFX_getUTF8Width(gfx, today_hdr)) / 2, 125);
+    GFX_setCursor(gfx, 6 + (224 - 112) / 2, 125);
     GFX_printf(gfx, "%s", today_hdr);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
     
     if (data->weather.update_timestamp == 0) {
         GFX_setFont(gfx, u8g2_font_arial_11);
         const char* no_data = "Hãy đồng bộ thời tiết";
-        GFX_setCursor(gfx, 6 + (224 - GFX_getUTF8Width(gfx, no_data)) / 2, 205);
+        GFX_setCursor(gfx, 6 + (224 - 118) / 2, 205);
         GFX_printf(gfx, "%s", no_data);
     } else {
         // Column dividers
@@ -777,38 +850,32 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
             uint16_t col_x = 6;
             uint16_t col_w = 75;
             DrawWeatherIcon(gfx, data->weather.morning_weather, col_x + (col_w - 24) / 2, 135);
-            char temp_buf[32];
-            snprintf(temp_buf, sizeof(temp_buf), "Sáng: %d°C", data->weather.morning_temp);
             GFX_setFont(gfx, u8g2_font_arial_11);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, temp_buf)) / 2, 175);
-            GFX_printf(gfx, "%s", temp_buf);
+            GFX_setCursor(gfx, col_x + (col_w - 60) / 2, 175);
+            GFX_printf(gfx, "Sáng: %d°C", data->weather.morning_temp);
             
-            const char* time_str = "06:00-12:00";
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, time_str)) / 2, 195);
-            GFX_printf(gfx, "%s", time_str);
+            GFX_setCursor(gfx, col_x + (col_w - 66) / 2, 195);
+            GFX_printf(gfx, "06:00-12:00");
             
-            char hum_val[8];
-            snprintf(hum_val, sizeof(hum_val), "%d%%", data->weather.morning_humidity);
-            uint16_t total_w_hum = 8 + 4 + GFX_getUTF8Width(gfx, hum_val);
+            uint16_t total_w_hum = 8 + 4 + 24;
             uint16_t start_x_hum = col_x + (col_w - total_w_hum) / 2;
             DrawDropletIcon(gfx, start_x_hum, 210, GFX_BLACK);
             GFX_setCursor(gfx, start_x_hum + 12, 220);
-            GFX_printf(gfx, "%s", hum_val);
+            GFX_printf(gfx, "%d%%", data->weather.morning_humidity);
             
-            char uv_val[16];
-            snprintf(uv_val, sizeof(uv_val), ": %d.%d", data->weather.morning_uv / 10, data->weather.morning_uv % 10);
-            uint16_t total_w_uv = GFX_getUTF8Width(gfx, "UV") + GFX_getUTF8Width(gfx, uv_val);
+            uint16_t total_w_uv = 16 + 28; // "UV" (16px) + ": 2.5" (28px)
             uint16_t start_x_uv = col_x + (col_w - total_w_uv) / 2;
             GFX_setCursor(gfx, start_x_uv, 240);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
             GFX_printf(gfx, "UV");
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-            GFX_printf(gfx, "%s", uv_val);
+            GFX_printf(gfx, ": %d.%d", data->weather.morning_uv / 10, data->weather.morning_uv % 10);
             
-            const char* desc_str = GetWeatherDesc(data->weather.morning_weather, data->language);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, desc_str)) / 2, 265);
+            static const uint8_t weather_desc_width[] = {32, 36, 58, 44, 44, 52, 66};
+            uint8_t m_w = (data->weather.morning_weather < 7) ? weather_desc_width[data->weather.morning_weather] : 36;
+            GFX_setCursor(gfx, col_x + (col_w - m_w) / 2, 265);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-            GFX_printf(gfx, "%s", desc_str);
+            GFX_printf(gfx, "%s", GetWeatherDesc(data->weather.morning_weather, data->language));
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         }
         // Chiều
@@ -816,38 +883,32 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
             uint16_t col_x = 81;
             uint16_t col_w = 75;
             DrawWeatherIcon(gfx, data->weather.afternoon_weather, col_x + (col_w - 24) / 2, 135);
-            char temp_buf[32];
-            snprintf(temp_buf, sizeof(temp_buf), "Chiều: %d°C", data->weather.afternoon_temp);
             GFX_setFont(gfx, u8g2_font_arial_11);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, temp_buf)) / 2, 175);
-            GFX_printf(gfx, "%s", temp_buf);
+            GFX_setCursor(gfx, col_x + (col_w - 66) / 2, 175);
+            GFX_printf(gfx, "Chiều: %d°C", data->weather.afternoon_temp);
             
-            const char* time_str = "12:00-18:00";
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, time_str)) / 2, 195);
-            GFX_printf(gfx, "%s", time_str);
+            GFX_setCursor(gfx, col_x + (col_w - 66) / 2, 195);
+            GFX_printf(gfx, "12:00-18:00");
             
-            char hum_val[8];
-            snprintf(hum_val, sizeof(hum_val), "%d%%", data->weather.afternoon_humidity);
-            uint16_t total_w_hum = 8 + 4 + GFX_getUTF8Width(gfx, hum_val);
+            uint16_t total_w_hum = 8 + 4 + 24;
             uint16_t start_x_hum = col_x + (col_w - total_w_hum) / 2;
             DrawDropletIcon(gfx, start_x_hum, 210, GFX_BLACK);
             GFX_setCursor(gfx, start_x_hum + 12, 220);
-            GFX_printf(gfx, "%s", hum_val);
+            GFX_printf(gfx, "%d%%", data->weather.afternoon_humidity);
             
-            char uv_val[16];
-            snprintf(uv_val, sizeof(uv_val), ": %d.%d", data->weather.afternoon_uv / 10, data->weather.afternoon_uv % 10);
-            uint16_t total_w_uv = GFX_getUTF8Width(gfx, "UV") + GFX_getUTF8Width(gfx, uv_val);
+            uint16_t total_w_uv = 16 + 28;
             uint16_t start_x_uv = col_x + (col_w - total_w_uv) / 2;
             GFX_setCursor(gfx, start_x_uv, 240);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
             GFX_printf(gfx, "UV");
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-            GFX_printf(gfx, "%s", uv_val);
+            GFX_printf(gfx, ": %d.%d", data->weather.afternoon_uv / 10, data->weather.afternoon_uv % 10);
             
-            const char* desc_str = GetWeatherDesc(data->weather.afternoon_weather, data->language);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, desc_str)) / 2, 265);
+            static const uint8_t weather_desc_width[] = {32, 36, 58, 44, 44, 52, 66};
+            uint8_t a_w = (data->weather.afternoon_weather < 7) ? weather_desc_width[data->weather.afternoon_weather] : 36;
+            GFX_setCursor(gfx, col_x + (col_w - a_w) / 2, 265);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-            GFX_printf(gfx, "%s", desc_str);
+            GFX_printf(gfx, "%s", GetWeatherDesc(data->weather.afternoon_weather, data->language));
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         }
         // Tối
@@ -855,37 +916,32 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
             uint16_t col_x = 156;
             uint16_t col_w = 74;
             DrawWeatherIcon(gfx, data->weather.evening_weather, col_x + (col_w - 24) / 2, 135);
-            char temp_buf[32];
-            snprintf(temp_buf, sizeof(temp_buf), "Tối: %d°C", data->weather.evening_temp);
             GFX_setFont(gfx, u8g2_font_arial_11);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, temp_buf)) / 2, 175);
-            GFX_printf(gfx, "%s", temp_buf);
+            GFX_setCursor(gfx, col_x + (col_w - 56) / 2, 175);
+            GFX_printf(gfx, "Tối: %d°C", data->weather.evening_temp);
             
-            const char* time_str = "18:00-00:00";
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, time_str)) / 2, 195);
-            GFX_printf(gfx, "%s", time_str);
+            GFX_setCursor(gfx, col_x + (col_w - 66) / 2, 195);
+            GFX_printf(gfx, "18:00-00:00");
             
-            char hum_val[8];
-            snprintf(hum_val, sizeof(hum_val), "%d%%", data->weather.evening_humidity);
-            uint16_t total_w_hum = 8 + 4 + GFX_getUTF8Width(gfx, hum_val);
+            uint16_t total_w_hum = 8 + 4 + 24;
             uint16_t start_x_hum = col_x + (col_w - total_w_hum) / 2;
             DrawDropletIcon(gfx, start_x_hum, 210, GFX_BLACK);
             GFX_setCursor(gfx, start_x_hum + 12, 220);
-            GFX_printf(gfx, "%s", hum_val);
+            GFX_printf(gfx, "%d%%", data->weather.evening_humidity);
             
-            const char* uv_val = ": 0.0";
-            uint16_t total_w_uv = GFX_getUTF8Width(gfx, "UV") + GFX_getUTF8Width(gfx, uv_val);
+            uint16_t total_w_uv = 16 + 28;
             uint16_t start_x_uv = col_x + (col_w - total_w_uv) / 2;
             GFX_setCursor(gfx, start_x_uv, 240);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
             GFX_printf(gfx, "UV");
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-            GFX_printf(gfx, "%s", uv_val);
+            GFX_printf(gfx, ": 0.0");
             
-            const char* desc_str = GetWeatherDesc(data->weather.evening_weather, data->language);
-            GFX_setCursor(gfx, col_x + (col_w - GFX_getUTF8Width(gfx, desc_str)) / 2, 265);
+            static const uint8_t weather_desc_width[] = {32, 36, 58, 44, 44, 52, 66};
+            uint8_t e_w = (data->weather.evening_weather < 7) ? weather_desc_width[data->weather.evening_weather] : 36;
+            GFX_setCursor(gfx, col_x + (col_w - e_w) / 2, 265);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-            GFX_printf(gfx, "%s", desc_str);
+            GFX_printf(gfx, "%s", GetWeatherDesc(data->weather.evening_weather, data->language));
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         }
     }
@@ -897,27 +953,23 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     GFX_fillRect(gfx, 230, 112, 164, 18, GFX_BLACK);
     const char* tomor_hdr = "NGÀY MAI";
     GFX_setTextColor(gfx, GFX_WHITE, GFX_BLACK);
-    GFX_setCursor(gfx, 230 + (164 - GFX_getUTF8Width(gfx, tomor_hdr)) / 2, 125);
+    GFX_setCursor(gfx, 230 + (164 - 56) / 2, 125);
     GFX_printf(gfx, "%s", tomor_hdr);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
     
     if (data->weather.update_timestamp == 0) {
         GFX_setFont(gfx, u8g2_font_arial_11);
-        const char* no_data_small = "Đợi đồng bộ";
-        GFX_setCursor(gfx, 230 + (164 - GFX_getUTF8Width(gfx, no_data_small)) / 2, 160);
-        GFX_printf(gfx, "%s", no_data_small);
+        GFX_setCursor(gfx, 230 + (164 - 60) / 2, 160);
+        GFX_printf(gfx, "Đợi đồng bộ");
     } else {
         tm_t tomor_tm;
         transformTime(data->timestamp + 86400, &tomor_tm);
-        char tomor_date_str[32];
-        snprintf(tomor_date_str, sizeof(tomor_date_str), "%s, %02d/%02d", GetWeekdayUpperStr(tomor_tm.tm_wday, data->language), tomor_tm.tm_mday, tomor_tm.tm_mon + 1);
-        
-        uint16_t total_w_tomor = 24 + 8 + GFX_getUTF8Width(gfx, tomor_date_str);
+        uint16_t total_w_tomor = 24 + 8 + 72; // estimated date width
         uint16_t start_x_tomor = 230 + (164 - total_w_tomor) / 2;
         
         DrawWeatherIcon(gfx, data->weather.tomorrow_weather, start_x_tomor, 142);
         GFX_setCursor(gfx, start_x_tomor + 32, 148);
-        GFX_printf(gfx, "%s", tomor_date_str);
+        GFX_printf(gfx, "%s, %02d/%02d", GetWeekdayUpperStr(tomor_tm.tm_wday, data->language), tomor_tm.tm_mday, tomor_tm.tm_mon + 1);
         GFX_setCursor(gfx, start_x_tomor + 32, 162);
         GFX_printf(gfx, "%d°C - %d°C", data->weather.tomorrow_temp_min, data->weather.tomorrow_temp_max);
         GFX_setCursor(gfx, start_x_tomor + 32, 176);
@@ -930,15 +982,14 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     GFX_fillRect(gfx, 230, 195, 164, 18, GFX_BLACK);
     const char* aqi_hdr = "CHẤT LƯỢNG KHÔNG KHÍ";
     GFX_setTextColor(gfx, GFX_WHITE, GFX_BLACK);
-    GFX_setCursor(gfx, 230 + (164 - GFX_getUTF8Width(gfx, aqi_hdr)) / 2, 208);
+    GFX_setCursor(gfx, 230 + (164 - 130) / 2, 208);
     GFX_printf(gfx, "%s", aqi_hdr);
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
     
     if (data->weather.update_timestamp == 0) {
         GFX_setFont(gfx, u8g2_font_arial_11);
-        const char* no_aqi = "Không có dữ liệu AQI";
-        GFX_setCursor(gfx, 230 + (164 - GFX_getUTF8Width(gfx, no_aqi)) / 2, 250);
-        GFX_printf(gfx, "%s", no_aqi);
+        GFX_setCursor(gfx, 230 + (164 - 108) / 2, 250);
+        GFX_printf(gfx, "Không có dữ liệu AQI");
     } else {
         // Red box for AQI number
         uint16_t box_x = 236;
@@ -946,13 +997,13 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
         uint16_t box_w = 36;
         uint16_t box_h = 24;
         GFX_fillRect(gfx, box_x, box_y, box_w, box_h, GFX_RED);
-        char aqi_str[10];
-        snprintf(aqi_str, sizeof(aqi_str), "%d", data->weather.aqi);
         GFX_setFont(gfx, u8g2_font_arial_13);
-        uint16_t w_num = GFX_getUTF8Width(gfx, aqi_str);
+        uint16_t w_num = 6;
+        if (data->weather.aqi >= 100) w_num = 18;
+        else if (data->weather.aqi >= 10) w_num = 12;
         GFX_setCursor(gfx, box_x + (box_w - w_num) / 2, box_y + 17);
         GFX_setTextColor(gfx, GFX_WHITE, GFX_RED);
-        GFX_printf(gfx, "%s", aqi_str);
+        GFX_printf(gfx, "%d", data->weather.aqi);
         
         // Smiley Face & Status
         DrawFaceIcon(gfx, 278, box_y + 2, data->weather.aqi);
@@ -1008,11 +1059,11 @@ static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) 
     int wday = tm->tm_wday; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
     // Number of days in current month
-    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
-        days_in_month[1] = 29;
-    }
+    static const uint8_t days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     int num_days = days_in_month[mon];
+    if (mon == 1 && ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))) {
+        num_days = 29;
+    }
     
     // Day of week of the 1st day of the month (0 = Sun, 1 = Mon, ..., 6 = Sat)
     int first_wday = (wday - (mday - 1) % 7 + 7) % 7;
@@ -1025,6 +1076,13 @@ static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) 
         int draw_x = x + col * 15;
         int draw_y = y + 34 + row * 11;
         
+        char day_str[3];
+        day_str[0] = (day >= 10) ? ('0' + day / 10) : ('0' + day);
+        day_str[1] = (day >= 10) ? ('0' + day % 10) : '\0';
+        day_str[2] = '\0';
+        
+        int16_t w = GFX_getUTF8Width(gfx, day_str);
+
         if (day == mday) {
             int16_t box_x = draw_x + 1;
             int16_t box_y = draw_y - 9;
@@ -1032,18 +1090,12 @@ static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) 
             int16_t box_h = 11;
             GFX_fillRect(gfx, box_x, box_y, box_w, box_h, GFX_RED);
             GFX_setTextColor(gfx, GFX_WHITE, GFX_RED);
-            char day_str[4];
-            snprintf(day_str, sizeof(day_str), "%d", day);
-            int16_t w = GFX_getUTF8Width(gfx, day_str);
             GFX_setCursor(gfx, box_x + (box_w - w) / 2, draw_y);
-            GFX_printf(gfx, "%d", day);
+            GFX_printf(gfx, "%s", day_str);
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         } else {
-            char day_str[4];
-            snprintf(day_str, sizeof(day_str), "%d", day);
-            int16_t w = GFX_getUTF8Width(gfx, day_str);
             GFX_setCursor(gfx, draw_x + (12 - w) / 2, draw_y);
-            GFX_printf(gfx, "%d", day);
+            GFX_printf(gfx, "%s", day_str);
         }
         
         col++;
@@ -1054,26 +1106,12 @@ static void DrawMiniCalendar(Adafruit_GFX* gfx, tm_t* tm, int16_t x, int16_t y) 
     }
 }
 
-static int UTF8CharLen(const char* p) {
-    if (!p || *p == '\0') return 0;
-    unsigned char c = (unsigned char)*p;
-    if (c < 0x80) return 1;
-    if ((c & 0xE0) == 0xC0) return 2;
-    if ((c & 0xF0) == 0xE0) return 3;
-    if ((c & 0xF8) == 0xF0) return 4;
-    return 1; // fallback
-}
-
 static void DrawWrappedText(Adafruit_GFX* gfx, const char* text, int16_t col_x, int16_t col_w, int16_t row_y, int16_t row_h) {
-    char line1[32] = {0};
-    char line2[32] = {0};
-    
     int16_t max_w = col_w - 6; // 3px padding on left/right
     
     int16_t text_w = GFX_getUTF8Width(gfx, text);
     if (text_w <= max_w) {
         int16_t draw_x = col_x + (col_w - text_w) / 2;
-        // Shifted down by 2px (from +1 to +3) to avoid overlapping horizontal division line
         int16_t draw_y = row_y + (row_h - GFX_getFontHeight(gfx)) / 2 + GFX_getFontAscent(gfx) + 3;
         GFX_setCursor(gfx, draw_x, draw_y);
         GFX_printf(gfx, "%s", text);
@@ -1082,104 +1120,56 @@ static void DrawWrappedText(Adafruit_GFX* gfx, const char* text, int16_t col_x, 
     
     int len = strlen(text);
     int split_idx = -1;
-    
-    // Traverse strictly by character boundaries to find split space
-    int i = 0;
-    while (i < len) {
-        int char_len = UTF8CharLen(&text[i]);
-        if (char_len == 0) break;
-        
+    char temp[32];
+    for (int i = 0; i < len && i < 30; i++) {
         if (text[i] == ' ') {
-            char temp[32] = {0};
-            if (i < 32) {
-                memcpy(temp, text, i);
-                if (GFX_getUTF8Width(gfx, temp) <= max_w) {
-                    split_idx = i;
-                } else {
-                    break;
-                }
+            memcpy(temp, text, i);
+            temp[i] = '\0';
+            if (GFX_getUTF8Width(gfx, temp) <= max_w) {
+                split_idx = i;
             }
         }
-        i += char_len;
     }
     
-    // If no space splits the text cleanly, split by character boundary fitting within max_w
     if (split_idx == -1) {
-        int last_fit_idx = 0;
-        int i = 0;
-        while (i < len) {
-            int char_len = UTF8CharLen(&text[i]);
-            if (char_len == 0) break;
-            
-            char temp[32] = {0};
-            int next_i = i + char_len;
-            if (next_i < 32) {
-                memcpy(temp, text, next_i);
-                if (GFX_getUTF8Width(gfx, temp) <= max_w) {
-                    last_fit_idx = next_i;
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-            i = next_i;
+        split_idx = len / 2;
+        while (split_idx > 0 && (text[split_idx] & 0xC0) == 0x80) {
+            split_idx--;
         }
-        split_idx = last_fit_idx;
     }
     
-    if (split_idx <= 0 || split_idx >= len) {
-        split_idx = len;
-    }
-    
-    // Copy line 1 safely, maintaining UTF-8 boundaries
+    char line1[32];
     int copy_l1 = split_idx;
-    if (copy_l1 > 31) {
-        copy_l1 = 31;
-        while (copy_l1 > 0 && ((text[copy_l1] & 0xC0) == 0x80)) {
-            copy_l1--;
-        }
-    }
+    if (copy_l1 > 31) copy_l1 = 31;
     memcpy(line1, text, copy_l1);
     line1[copy_l1] = '\0';
     
-    // Copy line 2 safely
     int start_l2 = split_idx;
     if (start_l2 < len && text[start_l2] == ' ') {
         start_l2++;
     }
+    char line2[32];
     int len_l2 = len - start_l2;
-    if (len_l2 > 31) {
-        len_l2 = 31;
-        while (len_l2 > 0 && ((text[start_l2 + len_l2] & 0xC0) == 0x80)) {
-            len_l2--;
-        }
-    }
-    if (len_l2 > 0) {
-        memcpy(line2, &text[start_l2], len_l2);
-        line2[len_l2] = '\0';
-    }
+    if (len_l2 > 31) len_l2 = 31;
+    memcpy(line2, text + start_l2, len_l2);
+    line2[len_l2] = '\0';
     
     int16_t fh = GFX_getFontHeight(gfx);
-    int16_t total_h = fh * 2 + 3; // Reduced spacing by 2px (from fh*2 + 5 to fh*2 + 3)
-    // Shifted down by 2px (added +2 at the end) to avoid top line overlap
+    int16_t total_h = fh * 2 + 3;
     int16_t start_y = row_y + (row_h - total_h) / 2 + GFX_getFontAscent(gfx) + 2;
     
     int16_t w1 = GFX_getUTF8Width(gfx, line1);
     GFX_setCursor(gfx, col_x + (col_w - w1) / 2, start_y);
     GFX_printf(gfx, "%s", line1);
     
-    if (strlen(line2) > 0) {
-        int16_t w2 = GFX_getUTF8Width(gfx, line2);
-        GFX_setCursor(gfx, col_x + (col_w - w2) / 2, start_y + fh + 3);
-        GFX_printf(gfx, "%s", line2);
-    }
+    int16_t w2 = GFX_getUTF8Width(gfx, line2);
+    GFX_setCursor(gfx, col_x + (col_w - w2) / 2, start_y + fh + 3);
+    GFX_printf(gfx, "%s", line2);
 }
 
 static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui_data_t* data) {
     // 1. Draw outer border & grid dividers
     GFX_drawRect(gfx, 6, 6, 388, 288, GFX_BLACK);
-    GFX_drawRect(gfx, 7, 7, 386, 286, GFX_BLACK);
     
     // Draw monthly calendar in top-left
     DrawMiniCalendar(gfx, tm, 12, 12);
@@ -1244,21 +1234,17 @@ static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar,
     GFX_drawFastVLine(gfx, 281, 96, 196, GFX_BLACK);
     
     // Headers
+    static const char* const headers[] = {"THỨ", "SÁNG", "CHIỀU", "TỐI"};
+    static const int16_t header_x[] = {6, 56, 168, 281};
+    static const int16_t header_w[] = {50, 112, 113, 113};
     GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
-    GFX_setCursor(gfx, 6 + (50 - GFX_getUTF8Width(gfx, "THỨ")) / 2, 115);
-    GFX_printf(gfx, "THỨ");
-    
-    GFX_setCursor(gfx, 56 + (112 - GFX_getUTF8Width(gfx, "SÁNG")) / 2, 115);
-    GFX_printf(gfx, "SÁNG");
-    
-    GFX_setCursor(gfx, 168 + (113 - GFX_getUTF8Width(gfx, "CHIỀU")) / 2, 115);
-    GFX_printf(gfx, "CHIỀU");
-    
-    GFX_setCursor(gfx, 281 + (113 - GFX_getUTF8Width(gfx, "TỐI")) / 2, 115);
-    GFX_printf(gfx, "TỐI");
+    for (int i = 0; i < 4; i++) {
+        GFX_setCursor(gfx, header_x[i] + (header_w[i] - GFX_getUTF8Width(gfx, headers[i])) / 2, 115);
+        GFX_printf(gfx, "%s", headers[i]);
+    }
     
     // Weekday names
-    const char* weekdays[] = {"HAI", "BA", "TƯ", "NĂM", "SÁU", "BẢY"};
+    static const char* const weekdays[] = {"HAI", "BA", "TƯ", "NĂM", "SÁU", "BẢY"};
     
     // Fill the cells
     for (int day = 0; day < 6; day++) {
@@ -1279,19 +1265,17 @@ static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar,
         GFX_setFont(gfx, u8g2_font_arial_11);
         GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         
-        // Morning cell
-        if (strlen(data->timetable.morning[day]) > 0) {
-            DrawWrappedText(gfx, data->timetable.morning[day], 56, 112, row_y, 28);
-        }
-        
-        // Afternoon cell
-        if (strlen(data->timetable.afternoon[day]) > 0) {
-            DrawWrappedText(gfx, data->timetable.afternoon[day], 168, 113, row_y, 28);
-        }
-        
-        // Evening cell
-        if (strlen(data->timetable.evening[day]) > 0) {
-            DrawWrappedText(gfx, data->timetable.evening[day], 281, 113, row_y, 28);
+        const char* cell_texts[] = {
+            data->timetable.morning[day],
+            data->timetable.afternoon[day],
+            data->timetable.evening[day]
+        };
+        int16_t cell_x[] = {56, 168, 281};
+        int16_t cell_w[] = {112, 113, 113};
+        for (int c = 0; c < 3; c++) {
+            if (cell_texts[c][0] != '\0') {
+                DrawWrappedText(gfx, cell_texts[c], cell_x[c], cell_w[c], row_y, 28);
+            }
         }
     }
 }
@@ -1308,13 +1292,20 @@ void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data) {
     Adafruit_GFX gfx;
     int16_t ph = (__HEAP_SIZE - 512) / (data->width / 8);
 
+    uint16_t draw_width = (data->mode == MODE_NOTE_COUNTDOWN) ? 136 : data->width;
+    uint16_t draw_height = (data->mode == MODE_NOTE_COUNTDOWN) ? 300 : data->height;
     if (data->color == 2)
-        GFX_begin_3c(&gfx, data->width, data->height, ph);
+        GFX_begin_3c(&gfx, draw_width, draw_height, ph);
     else if (data->color == 3)
-        GFX_begin_4c(&gfx, data->width, data->height, ph);
+        GFX_begin_4c(&gfx, draw_width, draw_height, ph);
     else
-        GFX_begin(&gfx, data->width, data->height, ph);
+        GFX_begin(&gfx, draw_width, draw_height, ph);
 
+    if (data->mode == MODE_TIMETABLE && data->update_header_only) {
+        GFX_setWindow(&gfx, 0, 0, draw_width, 57);
+    } else if (data->mode == MODE_NOTE_COUNTDOWN) {
+        GFX_setWindow(&gfx, 0, 0, 136, 300);
+    }
     GFX_firstPage(&gfx);
     do {
         GFX_fillScreen(&gfx, GFX_WHITE);
@@ -1331,22 +1322,14 @@ void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data) {
             case MODE_TIMETABLE:
                 DrawTimetable(&gfx, &tm, &Lunar, data);
                 break;
+            case MODE_NOTE_COUNTDOWN:
+                DrawNoteCountdown(&gfx, &tm, &Lunar, data);
+                break;
             case 99: // Locked / Unauthorized device warning
                 GFX_setTextColor(&gfx, GFX_RED, GFX_WHITE);
                 GFX_setFont(&gfx, u8g2_font_arial_13);
                 GFX_setCursor(&gfx, 10, 40);
-                GFX_printf(&gfx, "CẢNH BÁO BẢO MẬT:");
-                
-                GFX_setTextColor(&gfx, GFX_BLACK, GFX_WHITE);
-                GFX_setFont(&gfx, u8g2_font_arial_11);
-                GFX_setCursor(&gfx, 10, 80);
-                GFX_printf(&gfx, "Thiết bị chưa được kích hoạt");
-                GFX_setCursor(&gfx, 10, 105);
-                GFX_printf(&gfx, "hoặc phần cứng không hợp lệ.");
-                GFX_setCursor(&gfx, 10, 135);
-                GFX_printf(&gfx, "Vui lòng liên hệ nhà sản xuất");
-                GFX_setCursor(&gfx, 10, 160);
-                GFX_printf(&gfx, "để kích hoạt thiết bị của bạn.");
+                GFX_printf(&gfx, "CẢNH BÁO BẢO MẬT: Chưa kích hoạt");
                 break;
             default:
                 break;

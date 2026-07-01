@@ -78,6 +78,7 @@
 						<button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
 						<button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
 						<button id="timetablemodebutton" type="button" class="primary" onclick="syncTime(3)">Chế độ T.Khóa Biểu</button>
+						<button id="notemodebutton" type="button" class="primary" onclick="syncTime(4)">Chế độ Ghi chú & Đếm ngược</button>
 						<button id="synctimebutton" type="button" class="primary" onclick="syncTime(255)">Đồng bộ thời gian</button>
 						<button id="syncweatherbutton" type="button" class="primary" onclick="syncWeather()" data-i18n="sync_weather_btn">Đồng bộ thời tiết</button>
 						<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()" data-i18n="clear_screen_btn">Xóa màn hình</button>
@@ -89,127 +90,202 @@
 				</div>
 			</div>
 		</fieldset>
+
 		<fieldset class="collapsible">
 			<legend onclick="toggleFieldset(this)">
-				<span class="legend-title">Thời khóa biểu</span>
+				<span class="legend-title">📝 Ghi chú & Đếm ngược (Note Mode)</span>
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div class="timetable-cards-container">
-					<!-- Thứ Hai -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Hai</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-0">Sáng</label>
-								<input type="text" id="tt-m-0" maxlength="30" placeholder="Ví dụ: Họp Team (09:00)">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-a-0">Chiều</label>
-								<input type="text" id="tt-a-0" maxlength="30" placeholder="Ví dụ: Viết Báo Cáo">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-e-0">Tối</label>
-								<input type="text" id="tt-e-0" maxlength="30" placeholder="Ví dụ: Học Thêm">
+				<div class="note-container">
+					<!-- Left Panel: Preview -->
+					<div class="note-left-panel">
+						<div class="note-preview-wrapper">
+							<div class="note-preview-label">📺 Xem trước màn hình EPD (400×300)</div>
+							<div class="note-preview-frame">
+								<!-- Hidden source canvases -->
+								<canvas id="epd-preview-canvas" width="136" height="300" style="display: none;"></canvas>
+								<canvas id="epd-note-canvas" width="264" height="300" style="display: none;"></canvas>
+								<!-- Main composite preview canvas -->
+								<canvas id="epd-note-composite-preview" width="400" height="300" style="border: 1px solid var(--canvas-border); border-radius: 4px; box-shadow: var(--shadow);"></canvas>
 							</div>
 						</div>
 					</div>
-					<!-- Thứ Ba -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Ba</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-1">Sáng</label>
-								<input type="text" id="tt-m-1" maxlength="30" placeholder="">
+
+					<!-- Right Panel: Note & Event Editor -->
+					<div class="note-right-panel">
+						<!-- Note Settings -->
+						<div class="note-section-title">✍️ Cấu hình Ghi chú (Nửa bên phải)</div>
+						<div class="note-form-grid">
+							<div class="note-form-group full-width">
+								<label for="epd-note-input">Nội dung ghi chú:</label>
+								<textarea id="epd-note-input" rows="4" placeholder="Nhập ghi chú..."></textarea>
 							</div>
-							<div class="timetable-field">
-								<label for="tt-a-1">Chiều</label>
-								<input type="text" id="tt-a-1" maxlength="30" placeholder="">
+							<div class="note-form-group">
+								<label for="epd-note-font">Font chữ:</label>
+								<select id="epd-note-font" onchange="onNoteControlChange()">
+									<option value="Arial">Arial</option>
+									<option value="Georgia">Georgia</option>
+									<option value="Times New Roman">Times New Roman</option>
+									<option value="Courier New">Courier New</option>
+									<option value="Verdana">Verdana</option>
+									<option value="Tahoma">Tahoma</option>
+								</select>
 							</div>
-							<div class="timetable-field">
-								<label for="tt-e-1">Tối</label>
-								<input type="text" id="tt-e-1" maxlength="30" placeholder="">
+							<div class="note-form-group">
+								<label for="epd-note-size">Cỡ chữ (px):</label>
+								<input type="number" id="epd-note-size" value="13" min="8" max="30" onchange="onNoteControlChange()">
 							</div>
-						</div>
-					</div>
-					<!-- Thứ Tư -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Tư</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-2">Sáng</label>
-								<input type="text" id="tt-m-2" maxlength="30" placeholder="">
+							<div class="note-form-group">
+								<label for="epd-note-spacing">Dòng kẻ (px): <span id="epd-note-spacing-val">22px</span></label>
+								<input type="range" id="epd-note-spacing" min="15" max="40" value="22" oninput="document.getElementById('epd-note-spacing-val').innerText = this.value + 'px'; onNoteControlChange()">
 							</div>
-							<div class="timetable-field">
-								<label for="tt-a-2">Chiều</label>
-								<input type="text" id="tt-a-2" maxlength="30" placeholder="">
+							<div class="note-form-group">
+								<label for="epd-note-color">Màu chữ:</label>
+								<select id="epd-note-color" onchange="onNoteControlChange()">
+									<option value="#000000">⚫ Đen</option>
+									<option value="#cc0000">🔴 Đỏ</option>
+								</select>
 							</div>
-							<div class="timetable-field">
-								<label for="tt-e-2">Tối</label>
-								<input type="text" id="tt-e-2" maxlength="30" placeholder="">
+							<div class="note-form-group full-width align-controls">
+								<label style="margin-bottom: 4px;">Căn lề:</label>
+								<div class="epd-note-align-group">
+									<button type="button" class="epd-note-align-btn" data-align="left">Trái</button>
+									<button type="button" class="epd-note-align-btn" data-align="center">Giữa</button>
+									<button type="button" class="epd-note-align-btn" data-align="right">Phải</button>
+									<button type="button" class="epd-note-align-btn" data-align="justify">Căn đều</button>
+								</div>
 							</div>
-						</div>
-					</div>
-					<!-- Thứ Năm -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Năm</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-3">Sáng</label>
-								<input type="text" id="tt-m-3" maxlength="30" placeholder="">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-a-3">Chiều</label>
-								<input type="text" id="tt-a-3" maxlength="30" placeholder="">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-e-3">Tối</label>
-								<input type="text" id="tt-e-3" maxlength="30" placeholder="">
-							</div>
-						</div>
-					</div>
-					<!-- Thứ Sáu -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Sáu</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-4">Sáng</label>
-								<input type="text" id="tt-m-4" maxlength="30" placeholder="">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-a-4">Chiều</label>
-								<input type="text" id="tt-a-4" maxlength="30" placeholder="">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-e-4">Tối</label>
-								<input type="text" id="tt-e-4" maxlength="30" placeholder="">
+							<div class="note-form-group full-width style-checkboxes">
+								<label class="checkbox-inline">
+									<input type="checkbox" id="epd-note-bold" onchange="onNoteControlChange()"> <b>Đậm (B)</b>
+								</label>
+								<label class="checkbox-inline">
+									<input type="checkbox" id="epd-note-italic" onchange="onNoteControlChange()"> <i>Nghiêng (I)</i>
+								</label>
+								<label class="checkbox-inline">
+									<input type="checkbox" id="epd-note-wrap" checked onchange="onNoteControlChange()"> Tự động xuống dòng
+								</label>
 							</div>
 						</div>
-					</div>
-					<!-- Thứ Bảy -->
-					<div class="timetable-card">
-						<div class="timetable-card-header">Thứ Bảy</div>
-						<div class="timetable-card-body">
-							<div class="timetable-field">
-								<label for="tt-m-5">Sáng</label>
-								<input type="text" id="tt-m-5" maxlength="30" placeholder="">
+
+						<hr class="note-divider">
+
+						<!-- Event Countdown Settings -->
+						<div class="note-section-title">⏰ Sự kiện đếm ngược (Nửa bên trái)</div>
+						<div class="note-form-grid">
+							<div class="note-form-group">
+								<label for="epd-event-name">Tên sự kiện:</label>
+								<input type="text" id="epd-event-name" maxlength="30" placeholder="Ví dụ: Tết Nguyên Đán">
 							</div>
-							<div class="timetable-field">
-								<label for="tt-a-5">Chiều</label>
-								<input type="text" id="tt-a-5" maxlength="30" placeholder="">
-							</div>
-							<div class="timetable-field">
-								<label for="tt-e-5">Tối</label>
-								<input type="text" id="tt-e-5" maxlength="30" placeholder="">
+							<div class="note-form-group">
+								<label for="epd-event-dt">Thời gian sự kiện:</label>
+								<input type="datetime-local" id="epd-event-dt">
 							</div>
 						</div>
+
+						<div class="flex-container" style="justify-content: center; margin-top: 15px; gap: 8px;">
+							<button type="button" class="secondary" onclick="clearNoteEvent()">Xóa sự kiện</button>
+							<button type="button" class="primary" onclick="saveNoteEvent()">Đồng bộ sự kiện</button>
+						</div>
+
+						<hr class="note-divider">
+
+						<!-- Note Actions -->
+						<div class="flex-container" style="justify-content: center; margin-top: 15px; gap: 8px;">
+							<button type="button" class="secondary" onclick="loadNoteToMainCanvas()">Tải lên bảng vẽ chính</button>
+							<button type="button" class="primary" onclick="sendNoteImage()">📤 Gửi Ghi chú lên đồng hồ</button>
+						</div>
 					</div>
-				</div>
-				<div class="flex-container" style="justify-content: center; margin-top: 15px;">
-					<button id="sendtimetablebutton" type="button" class="primary" onclick="sendTimetable()">Gửi Thời khóa biểu lên đồng hồ</button>
 				</div>
 			</div>
 		</fieldset>
+
+		<fieldset class="collapsible">
+			<legend onclick="toggleFieldset(this)">
+				<span class="legend-title">📅 Thời khóa biểu (Excel Mode)</span>
+				<span class="collapse-icon">▼</span>
+			</legend>
+			<div class="fieldset-content">
+				<div class="tt-container">
+					<!-- Left Panel: Preview -->
+					<div class="tt-left-panel">
+						<div class="tt-preview-wrapper">
+							<div class="tt-preview-label">📺 Xem trước màn hình EPD (400×300)</div>
+							<div class="tt-preview-frame">
+								<canvas id="tt-epd-preview" width="400" height="300"></canvas>
+							</div>
+						</div>
+					</div>
+
+					<!-- Right Panel: Spreadsheet Editor -->
+					<div class="tt-right-panel">
+						<!-- Toolbar -->
+						<div class="tt-toolbar-bar">
+							<!-- Font Group -->
+							<div class="tt-tb-group">
+								<span class="tt-tb-label">Font</span>
+								<select id="tt-tb-font" onchange="window.ttApplyToolbar()">
+									<option value="Arial">Arial</option>
+									<option value="Georgia">Georgia</option>
+									<option value="Times New Roman">Times New Roman</option>
+									<option value="Courier New">Courier New</option>
+									<option value="Verdana">Verdana</option>
+									<option value="Tahoma">Tahoma</option>
+								</select>
+							</div>
+							<!-- Size Group -->
+							<div class="tt-tb-group">
+								<span class="tt-tb-label">Cỡ</span>
+								<input type="number" id="tt-tb-size" value="13" min="7" max="36" style="width: 55px;" onchange="window.ttApplyToolbar()">
+							</div>
+							<!-- Color Group -->
+							<div class="tt-tb-group">
+								<span class="tt-tb-label">Màu</span>
+								<select id="tt-tb-color" onchange="window.ttApplyToolbar()">
+									<option value="#000000">⚫ Đen</option>
+									<option value="#cc0000">🔴 Đỏ</option>
+								</select>
+							</div>
+							<!-- Style Controls -->
+							<div class="tt-tb-group">
+								<button id="tt-tb-bold" class="tt-style-btn" onclick="window.ttToggleBold()" title="Đậm (Bold)"><b>B</b></button>
+								<button id="tt-tb-italic" class="tt-style-btn" onclick="window.ttToggleItalic()" title="Nghiêng (Italic)"><i>I</i></button>
+							</div>
+							<!-- Align Controls -->
+							<div class="tt-tb-group">
+								<span class="tt-tb-label">Căn</span>
+								<select id="tt-tb-align" onchange="window.ttApplyToolbar()">
+									<option value="left">← Trái</option>
+									<option value="center" selected>↔ Giữa</option>
+									<option value="right">→ Phải</option>
+								</select>
+							</div>
+							<!-- Structure Control (Del Column) -->
+							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto;">
+								<button type="button" class="secondary btn-sm" onclick="window.ttDelCol()" title="Xóa cột cuối cùng" style="padding: 4px 8px; font-size: 0.85em;">✕ Cột</button>
+							</div>
+						</div>
+
+						<!-- Sheet scrollable table area -->
+						<div class="tt-sheet-scroll">
+							<div id="tt-sheet-wrapper"></div>
+						</div>
+
+						<!-- Hidden canvas for rendering -->
+						<canvas id="tt-table-canvas" style="display:none;"></canvas>
+
+						<!-- Actions -->
+						<div class="flex-container" style="justify-content: center; margin-top: 15px;">
+							<button id="sendtimetablebutton" type="button" class="primary" onclick="window.sendTimetableImage()" style="width: 100%; max-width: 320px; font-weight: bold; padding: 10px 20px;">
+								📤 Gửi Thời Khóa Biểu lên đồng hồ
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</fieldset>
+
 		<fieldset class="collapsible">
 			<legend onclick="toggleFieldset(this)">
 				<span class="legend-title">Lịch tắt màn hình (Tiết kiệm pin)</span>
@@ -506,6 +582,8 @@
 
 	<script type="text/javascript" src="js/paint.js?v=20251109"></script>
 	<script type="text/javascript" src="js/crop.js?v=20251109"></script>
+	<script type="text/javascript" src="js/epd-note.js?v=20260630"></script>
+	<script type="text/javascript" src="js/epd-timetable.js?v=20260701"></script>
 	<script type="text/javascript" src="js/main.js?v=20251109"></script>
 	<script>
 		var _hmt = _hmt || [];
