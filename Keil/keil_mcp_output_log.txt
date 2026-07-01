@@ -1,9 +1,8 @@
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'nRF51822_xxAA'
-compiling EPD_service.c...
 compiling GUI.c...
 linking...
-Program Size: Code=43660 RO-data=15984 RW-data=332 ZI-data=8172  
+Program Size: Code=43736 RO-data=15984 RW-data=332 ZI-data=8172  
 FromELF: creating hex file...
 After Build - User command #1: ..\tools\make-ota-nrf51.bat d:\EPD-nRF5-main\Keil\_build_nRF51\ EPD-nRF51
 Zip created at d:\EPD-nRF5-main\Keil\_build_nRF51\EPD-nRF51-ota.zip
@@ -14,14 +13,14 @@ Bootloader DFU Settings:
 * File:                     d:\EPD-nRF5-main\Keil\_build_nRF51\EPD-nRF51-settings.hex
 * Family:                   nRF51
 * Start Address:            0x0003FC00
-* CRC:                      0x46832F07
+* CRC:                      0xECA7072C
 * Settings Version:         0x00000001 (1)
 * App Version:              0x00000019 (25)
 * Bootloader Version:       0x00000001 (1)
 * Bank Layout:              0x00000000
 * Current Bank:             0x00000000
-* Application Size:         0x0000E944 (59716 bytes)
-* Application CRC:          0x0663C3E9
+* Application Size:         0x0000E990 (59792 bytes)
+* Application CRC:          0xD51BB493
 * Bank0 Bank Code:          0x00000001
 * Softdevice Size:          0x00019FE0 (106464 bytes)
 * Boot Validation CRC:      0x00000000
@@ -35,4 +34,4 @@ Merging file "EPD-nRF51.hex" into output.
 Merging file "EPD-nRF51-settings.hex" into output.
 Storing merged file.
 ".\_build_nRF51\EPD-nRF51.axf" - 0 Error(s), 0 Warning(s).
-Build Time Elapsed:  00:00:08
+Build Time Elapsed:  00:00:09

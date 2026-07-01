@@ -113,7 +113,9 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
 
         // Draw DAYS (centered, number in black, word "NGÀY" in red, bolded)
         snprintf(num_buf, sizeof(num_buf), "%d ", days);
+        GFX_setFont(gfx, u8g2_font_logisoso16_tn);
         w_num = GFX_getUTF8Width(gfx, num_buf);
+        GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
         w_word = GFX_getUTF8Width(gfx, "NGÀY");
         w_total = w_num + w_word;
         x_start = 68 - w_total / 2;
@@ -121,14 +123,18 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
         for (int dx = 0; dx <= 1; dx++) {
             GFX_setCursor(gfx, x_start + dx, 205);
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+            GFX_setFont(gfx, u8g2_font_logisoso16_tn);
             GFX_printf(gfx, "%s", num_buf);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+            GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
             GFX_printf(gfx, "NGÀY");
         }
 
         // Draw HOURS (centered, number in black, word "GIỜ" in red, bolded)
         snprintf(num_buf, sizeof(num_buf), "%d ", hours);
+        GFX_setFont(gfx, u8g2_font_logisoso16_tn);
         w_num = GFX_getUTF8Width(gfx, num_buf);
+        GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
         w_word = GFX_getUTF8Width(gfx, "GIỜ");
         w_total = w_num + w_word;
         x_start = 68 - w_total / 2;
@@ -136,8 +142,10 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
         for (int dx = 0; dx <= 1; dx++) {
             GFX_setCursor(gfx, x_start + dx, 227);
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
+            GFX_setFont(gfx, u8g2_font_logisoso16_tn);
             GFX_printf(gfx, "%s", num_buf);
             GFX_setTextColor(gfx, GFX_RED, GFX_WHITE);
+            GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
             GFX_printf(gfx, "GIỜ");
         }
 
@@ -151,6 +159,7 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
             }
             safe_name[i] = c;
         }
+        GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
         uint16_t w_name = GFX_getUTF8Width(gfx, safe_name);
         GFX_setCursor(gfx, 68 - w_name / 2, 257);
         GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
