@@ -44,8 +44,8 @@
 					<div class="flex-group right debug">
 						<label for="epddriver" data-i18n="driver_label">Driver</label>
 						<select id="epddriver" onchange="updateDitcherOptions()">
+							<option value="03" data-color="threeColor" data-size="4.2_400_300" selected>4.2" (3-Color, UC8176)</option>
 							<option value="01" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, UC8176)</option>
-							<option value="03" data-color="threeColor" data-size="4.2_400_300">4.2" (3-Color, UC8176)</option>
 							<option value="04" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, SSD1619)</option>
 							<option value="02" data-color="threeColor" data-size="4.2_400_300">4.2" (3-Color, SSD1619)</option>
 							<option value="05" data-color="fourColor" data-size="4.2_400_300">4.2" (4-Color, JD79668)</option>
@@ -481,8 +481,8 @@
 					<div class="flex-group debug">
 						<label for="ditherMode" data-i18n="color_mode">Chế độ màu:</label>
 						<select id="ditherMode" onchange="applyDither()">
+							<option value="threeColor" selected>B/W/R (3-Color)</option>
 							<option value="blackWhiteColor">B/W (2-Color)</option>
-							<option value="threeColor">B/W/R (3-Color)</option>
 							<option value="fourColor">B/W/R/Y (4-Color)</option>
 							<option value="sixColor">6-Color</option>
 						</select>
