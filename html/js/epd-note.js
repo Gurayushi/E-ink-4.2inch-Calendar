@@ -173,11 +173,22 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, LEFT_W, FULL_H);
 
-    // Top: Analog Clock (Center at 68, 75, radius 50)
-    drawAnalogClock(ctx, 68, 75, 50);
+    // Check if power saving is active
+    let powerSavingActive = false;
+    if (window.sleepScheduleData) {
+      const now = new Date();
+      let day_idx = now.getDay() - 1;
+      if (day_idx < 0) day_idx = 6;
+      powerSavingActive = (window.sleepScheduleData.always_run_days & (1 << day_idx)) === 0;
+    }
 
-    // Bottom: Event Countdown (Center at 68, Y=205)
-    drawEventCountdown(ctx, 68, 205);
+    // Top: Analog Clock (Center at 68, 75, radius 50)
+    if (!powerSavingActive) {
+      drawAnalogClock(ctx, 68, 75, 50);
+    }
+
+    // Bottom: Event Countdown (Center at 68, Y=220) - shifted down by 15px
+    drawEventCountdown(ctx, 68, 220);
   }
 
   function drawAnalogClock(ctx, cx, cy, radius) {
@@ -331,9 +342,8 @@
   }
 
   function updateCompositeCanvas() {
-    const mainCanvas = document.getElementById('canvas');
     const previewBoxCanvas = document.getElementById('epd-note-composite-preview');
-    const canvases = [mainCanvas, previewBoxCanvas];
+    const canvases = [previewBoxCanvas];
     
     const previewCanvas = document.getElementById('epd-preview-canvas');
     const noteCanvas = document.getElementById('epd-note-canvas');
@@ -489,10 +499,10 @@
       const halfLength = Math.floor(processedData.length / 2);
       const bwData = processedData.slice(0, halfLength);
       const redData = processedData.slice(halfLength);
-      await writeImage(bwData, 'bw');
-      await writeImage(redData, 'red');
+      await writeImage(bwData, 'bw', 0, 0.5);
+      await writeImage(redData, 'red', 50, 0.5);
     } else {
-      await writeImage(processedData, 'bw');
+      await writeImage(processedData, 'bw', 0, 1);
     }
 
     // Refresh EPD screen
@@ -502,6 +512,12 @@
     const sendTime = ((new Date().getTime() - startTime) / 1000.0).toFixed(1);
     addLog(`✅ Gửi ghi chú hoàn thành! Thời gian: ${sendTime}s`);
     if (status) status.parentElement.style.display = "none";
+
+    const progressEl = document.getElementById("transfer-progress");
+    if (progressEl) {
+      progressEl.style.display = "none";
+      progressEl.value = 0;
+    }
 
     alert('✅ Đã đồng bộ thành công cả Ghi chú và Đếm ngược!');
   };
@@ -515,8 +531,14 @@
     if (!noteCanvas) return;
 
     if (typeof canvas !== 'undefined' && canvas && typeof ctx !== 'undefined' && ctx) {
-      canvas.width = RIGHT_W;
-      canvas.height = FULL_H;
+      canvas.width = 400;
+      canvas.height = 300;
+      
+      // Xóa trắng toàn bộ bảng vẽ trước khi chép Note sang
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Vẽ Note vào chính giữa bảng vẽ hoặc góc trái, vì Note là 400x300 nên cứ vẽ thẳng vào (x=0, y=0)
       ctx.drawImage(noteCanvas, 0, 0);
 
       // Select matching canvas size option

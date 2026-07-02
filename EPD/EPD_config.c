@@ -6,12 +6,18 @@
 #include "fds.h"
 #include "nordic_common.h"
 #include "nrf_log.h"
+#include "nrf_soc.h"
 
 #define CONFIG_FILE_ID 0x0000
 #define CONFIG_REC_KEY 0x0001
 
+static volatile bool m_fds_initialized = false;
+
 static void fds_evt_handler(fds_evt_t const* const p_fds_evt) {
     NRF_LOG_DEBUG("fds evt: id=%d result=%d\n", p_fds_evt->id, p_fds_evt->result);
+    if (p_fds_evt->id == FDS_EVT_INIT) {
+        m_fds_initialized = true;
+    }
 }
 
 static void run_fds_gc(void* p_event_data, uint16_t event_size) {
@@ -21,6 +27,8 @@ static void run_fds_gc(void* p_event_data, uint16_t event_size) {
 
 void epd_config_init(epd_config_t* cfg) {
     ret_code_t ret;
+
+    m_fds_initialized = false;
 
     ret = fds_register(fds_evt_handler);
     if (ret != NRF_SUCCESS) {
@@ -32,6 +40,11 @@ void epd_config_init(epd_config_t* cfg) {
     if (ret != NRF_SUCCESS) {
         NRF_LOG_ERROR("fds_init failed, code=%d\n", ret);
         return;
+    }
+
+    // Wait until FDS is initialized
+    while (!m_fds_initialized) {
+        (void) sd_app_evt_wait();
     }
 
     run_fds_gc(NULL, 0);

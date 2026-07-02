@@ -179,6 +179,10 @@
     setEl('tt-tb-size',   cell.size);
     setEl('tt-tb-color',  cell.color);
     setEl('tt-tb-align',  cell.align);
+    setEl('tt-tb-width',  colWidths[c]);
+    setEl('tt-tb-height', rowHeights[r]);
+    setEl('tt-tb-width-slider',  colWidths[c]);
+    setEl('tt-tb-height-slider', rowHeights[r]);
     const boldBtn   = document.getElementById('tt-tb-bold');
     const italicBtn = document.getElementById('tt-tb-italic');
     if (boldBtn)   boldBtn.classList.toggle('active', cell.bold);
@@ -189,6 +193,36 @@
     const el = document.getElementById(id);
     if (el) el.value = val;
   }
+
+  window.ttApplySize = function () {
+    if (!selectedCell) return;
+    const w = parseInt(document.getElementById('tt-tb-width')?.value);
+    const h = parseInt(document.getElementById('tt-tb-height')?.value);
+    
+    if (!isNaN(w) && w >= 10 && w <= FULL_W) {
+      colWidths[selectedCell.c] = w;
+    }
+    if (!isNaN(h) && h >= 10 && h <= FULL_H) {
+      rowHeights[selectedCell.r] = h;
+    }
+    
+    saveState();
+    
+    // Dynamically update sizes without rebuilding DOM to avoid losing focus
+    const colCells = document.querySelectorAll(`.tt-cell[data-c="${selectedCell.c}"]`);
+    colCells.forEach(td => td.style.minWidth = Math.max(40, w) + 'px');
+    
+    const table = document.getElementById('tt-main-table');
+    if (table && table.tHead) {
+      const ths = table.tHead.querySelectorAll('.tt-col-header');
+      if (ths[selectedCell.c]) ths[selectedCell.c].style.minWidth = Math.max(40, w) + 'px';
+    }
+
+    const rowCells = document.querySelectorAll(`.tt-cell[data-r="${selectedCell.r}"]`);
+    rowCells.forEach(td => td.style.height = h + 'px');
+
+    renderPreview();
+  };
 
   window.ttApplyToolbar = function () {
     if (!selectedCell) return;
@@ -368,6 +402,51 @@
     return lines.length ? lines : [''];
   }
 
+  function draw7SegmentDigit(ctx, x, y, val, cS, fC) {
+    const nums = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x00, 0x40];
+    const w = 11 * cS;
+    const h = 20 * cS;
+    const t = cS;
+
+    const segs = [
+      [t, 0, w - 2*t, t],
+      [w - t, t, t, h/2 - t],
+      [w - t, h/2 + t/2, t, h/2 - t],
+      [t, h - t, w - 2*t, t],
+      [0, h/2 + t/2, t, h/2 - t],
+      [0, t, t, h/2 - t],
+      [t, h/2 - t/2, w - 2*t, t]
+    ];
+
+    const code = nums[val];
+    for (let j = 0; j < 7; j++) {
+      if ((code & (1 << j)) !== 0) {
+        ctx.fillStyle = fC;
+        ctx.fillRect(x + segs[j][0], y + segs[j][1], segs[j][2], segs[j][3]);
+      }
+    }
+  }
+
+  function draw7SegmentTime(ctx, x, y, hh, mm, cS, color) {
+    const d = 13 * cS;
+    const h1 = Math.floor(hh / 10);
+    const h2 = hh % 10;
+    const m1 = Math.floor(mm / 10);
+    const m2 = mm % 10;
+
+    draw7SegmentDigit(ctx, x, y, h1, cS, color);
+    draw7SegmentDigit(ctx, x + d, y, h2, cS, color);
+
+    const colonX = x + 2 * d;
+    ctx.fillStyle = color;
+    ctx.fillRect(colonX, y + Math.floor(4.5 * cS) + 1, 2 * cS, 2 * cS);
+    ctx.fillRect(colonX, y + Math.floor(13.5 * cS) + 3, 2 * cS, 2 * cS);
+
+    const minX = colonX + 4 * cS;
+    draw7SegmentDigit(ctx, minX, y, m1, cS, color);
+    draw7SegmentDigit(ctx, minX + d, y, m2, cS, color);
+  }
+
   // Live preview
   function renderPreview() {
     renderTableCanvas();
@@ -394,15 +473,22 @@
 
     // Right: clock + date
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    ctx.fillStyle = '#000'; ctx.font = 'bold 16px Arial';
+    let powerSavingActive = false;
+    if (window.sleepScheduleData) {
+      let day_idx = now.getDay() - 1;
+      if (day_idx < 0) day_idx = 6;
+      powerSavingActive = (window.sleepScheduleData.always_run_days & (1 << day_idx)) === 0;
+    }
+
+    if (!powerSavingActive) {
+      draw7SegmentTime(ctx, 200 + (200 - 54) / 2, 3, now.getHours(), now.getMinutes(), 1, '#000');
+    }
+
     ctx.textAlign = 'center';
-    ctx.fillText(hh+':'+mm, FULL_W*3/4, 8);
     const wdN = ['chủ nhật','thứ hai','thứ ba','thứ tư','thứ năm','thứ sáu','thứ bảy'];
     ctx.font = '9px Arial';
     const ds = wdN[now.getDay()]+' ngày '+String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
-    ctx.fillText(ds, FULL_W*3/4, 38);
+    ctx.fillText(ds, FULL_W*3/4, 43);
 
     // Table
     const tc = document.getElementById('tt-table-canvas');
@@ -458,10 +544,10 @@
       const half  = Math.floor(processedData.length / 2);
       const bwData  = processedData.slice(0, half);
       const redData = processedData.slice(half);
-      await writeImage(bwData, 'bw');
-      await writeImage(redData, 'red');
+      await writeImage(bwData, 'bw', 0, 0.5);
+      await writeImage(redData, 'red', 50, 0.5);
     } else {
-      await writeImage(processedData, 'bw');
+      await writeImage(processedData, 'bw', 0, 1);
     }
 
     // Refresh EPD
@@ -470,6 +556,13 @@
 
     if (typeof addLog === 'function') addLog('✅ Gửi Thời Khóa Biểu thành công!');
     if (status) status.parentElement.style.display = 'none';
+    
+    const progressEl = document.getElementById("transfer-progress");
+    if (progressEl) {
+      progressEl.style.display = "none";
+      progressEl.value = 0;
+    }
+    
     alert('✅ Đã gửi Thời Khóa Biểu lên đồng hồ thành công!');
   };
 

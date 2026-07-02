@@ -56,6 +56,7 @@ void UC81xx_Refresh(epd_model_t* epd, bool partial) {
 
 void UC81xx_Init(epd_model_t* epd) {
     EPD_Reset(true, 50);
+    UC81xx_WaitBusy(500); // Wait for the display controller to finish booting up from hardware reset
     switch (epd->ic) {
         case DRV_IC_UC8159:
             EPD_Write(UC81xx_PWR, 0x37, 0x00);

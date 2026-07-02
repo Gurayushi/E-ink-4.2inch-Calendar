@@ -6,10 +6,15 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title data-i18n="title">Lịch E-Paper</title>
 	<link rel="shortcut icon" type="image/png" href="favicon.png">
-	<link rel="stylesheet" href="css/main.css?v=20251109">
+	<link rel="stylesheet" href="css/main.css?v=20260701g">
 </head>
 
 <body>
+	<div class="bg-blobs">
+		<div class="blob blob-1"></div>
+		<div class="blob blob-2"></div>
+		<div class="blob blob-3"></div>
+	</div>
 	<div class="main">
 		<h3>
 			<span data-i18n="title">Lịch E-Paper</span>
@@ -17,7 +22,7 @@
 				<div class="theme-switch-wrapper">
 					<span class="theme-icon">☀️</span>
 					<label class="theme-switch" for="checkbox-theme">
-						<input type="checkbox" id="checkbox-theme" onchange="toggleTheme(this.checked)" />
+						<input type="checkbox" id="checkbox-theme" onchange="toggleTheme(this.checked)" disabled />
 						<div class="slider"></div>
 					</label>
 					<span class="theme-icon">🌙</span>
@@ -75,10 +80,10 @@
 				</div>
 				<div class="flex-container">
 					<div class="flex-group">
-						<button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
-						<button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
-						<button id="timetablemodebutton" type="button" class="primary" onclick="syncTime(3)">Chế độ T.Khóa Biểu</button>
-						<button id="notemodebutton" type="button" class="primary" onclick="syncTime(4)">Chế độ Ghi chú & Đếm ngược</button>
+						<button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1, false, true)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
+						<button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2, false, true)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
+						<button id="timetablemodebutton" type="button" class="primary" onclick="syncTime(3, false, true)">Chế độ T.Khóa Biểu</button>
+						<button id="notemodebutton" type="button" class="primary" onclick="syncTime(4, false, true)">Chế độ Ghi chú & Đếm ngược</button>
 						<button id="synctimebutton" type="button" class="primary" onclick="syncTime(255)">Đồng bộ thời gian</button>
 						<button id="syncweatherbutton" type="button" class="primary" onclick="syncWeather()" data-i18n="sync_weather_btn">Đồng bộ thời tiết</button>
 						<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()" data-i18n="clear_screen_btn">Xóa màn hình</button>
@@ -260,6 +265,17 @@
 									<option value="center" selected>↔ Giữa</option>
 									<option value="right">→ Phải</option>
 								</select>
+							</div>
+							<!-- Size Controls -->
+							<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
+								<span class="tt-tb-label">Rộng</span>
+								<input type="range" id="tt-tb-width-slider" min="10" max="400" value="40" style="width: 120px; cursor: pointer;" oninput="document.getElementById('tt-tb-width').value = this.value; window.ttApplySize()">
+								<input type="number" id="tt-tb-width" title="Độ rộng cột (px)" min="10" max="400" style="width: 45px; padding: 2px;" onchange="document.getElementById('tt-tb-width-slider').value = this.value; window.ttApplySize()">
+							</div>
+							<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
+								<span class="tt-tb-label">Cao</span>
+								<input type="range" id="tt-tb-height-slider" min="10" max="300" value="30" style="width: 120px; cursor: pointer;" oninput="document.getElementById('tt-tb-height').value = this.value; window.ttApplySize()">
+								<input type="number" id="tt-tb-height" title="Chiều cao hàng (px)" min="10" max="300" style="width: 45px; padding: 2px;" onchange="document.getElementById('tt-tb-height-slider').value = this.value; window.ttApplySize()">
 							</div>
 							<!-- Structure Control -->
 							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto; display: flex; gap: 4px;">
@@ -498,10 +514,13 @@
 						<label for="mtusize">MTU:</label>
 						<input type="number" id="mtusize" value="20" min="0" max="255">
 						<label for="interleavedcount" data-i18n="confirm_interval">K.hoảng ACK:</label>
-						<input type="number" id="interleavedcount" value="50" min="0" max="500">
+						<input type="number" id="interleavedcount" value="3" min="0" max="500">
 					</div>
 				</div>
-				<div class="status-bar"><b data-i18n="status">Trạng thái: </b><span id="status"></span></div>
+				<div class="status-bar">
+					<b data-i18n="status">Trạng thái: </b><span id="status"></span>
+					<progress id="transfer-progress" value="0" max="100" style="display: none;"></progress>
+				</div>
 				<div class="flex-container">
 					<div class="flex-group">
 						<button type="button" class="secondary debug" onclick="rotateCanvas()" data-i18n="rotate_canvas_btn">Xoay Ảnh</button>
@@ -580,14 +599,14 @@
 			</span>
 		</div>
 	</div>
-	<script type="text/javascript" src="js/lang.js?v=20251109"></script>
-	<script type="text/javascript" src="js/dithering.js?v=20251109"></script>
+	<script type="text/javascript" src="js/lang.js?v=20260701g"></script>
+	<script type="text/javascript" src="js/dithering.js?v=20260701g"></script>
 
-	<script type="text/javascript" src="js/paint.js?v=20251109"></script>
-	<script type="text/javascript" src="js/crop.js?v=20251109"></script>
-	<script type="text/javascript" src="js/epd-note.js?v=20260630"></script>
-	<script type="text/javascript" src="js/epd-timetable.js?v=20260701"></script>
-	<script type="text/javascript" src="js/main.js?v=20251109"></script>
+	<script type="text/javascript" src="js/paint.js?v=20260701g"></script>
+	<script type="text/javascript" src="js/crop.js?v=20260701g"></script>
+	<script type="text/javascript" src="js/epd-note.js?v=20260701g"></script>
+	<script type="text/javascript" src="js/epd-timetable.js?v=20260701g"></script>
+	<script type="text/javascript" src="js/main.js?v=20260701g"></script>
 	<script>
 		var _hmt = _hmt || [];
 		(function () {

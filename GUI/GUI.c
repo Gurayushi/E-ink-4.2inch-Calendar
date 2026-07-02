@@ -86,7 +86,9 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
     GFX_drawRect(gfx, 6, 6, 124, 288, GFX_BLACK);
 
     // 1. Draw Analog Clock in Left Half (cx = 68, radius = 50)
-    DrawAnalogClock(gfx, 68, 75, 50, tm);
+    if (!data->is_sleep) {
+        DrawAnalogClock(gfx, 68, 75, 50, tm);
+    }
 
     // 2. Draw Countdown Event in Left Half (centered at 68)
     GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
@@ -94,7 +96,7 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
 
     if (data->note_event.target_timestamp == 0 || data->note_event.target_timestamp == 0xFFFFFFFF) {
         uint16_t w = GFX_getUTF8Width(gfx, "Không có sự kiện");
-        GFX_setCursor(gfx, 68 - w / 2, 200);
+        GFX_setCursor(gfx, 68 - w / 2, 215);
         GFX_printf(gfx, "Không có sự kiện");
     } else {
         uint32_t now_ts = data->timestamp;
@@ -121,7 +123,7 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
         x_start = 68 - w_total / 2;
 
         for (int dx = 0; dx <= 1; dx++) {
-            GFX_setCursor(gfx, x_start + dx, 205);
+            GFX_setCursor(gfx, x_start + dx, 220);
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
             GFX_setFont(gfx, u8g2_font_logisoso16_tn);
             GFX_printf(gfx, "%s", num_buf);
@@ -140,7 +142,7 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
         x_start = 68 - w_total / 2;
 
         for (int dx = 0; dx <= 1; dx++) {
-            GFX_setCursor(gfx, x_start + dx, 227);
+            GFX_setCursor(gfx, x_start + dx, 242);
             GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
             GFX_setFont(gfx, u8g2_font_logisoso16_tn);
             GFX_printf(gfx, "%s", num_buf);
@@ -161,7 +163,7 @@ static void DrawNoteCountdown(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lu
         }
         GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
         uint16_t w_name = GFX_getUTF8Width(gfx, safe_name);
-        GFX_setCursor(gfx, 68 - w_name / 2, 257);
+        GFX_setCursor(gfx, 68 - w_name / 2, 272);
         GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
         GFX_printf(gfx, "%s", safe_name);
     }
@@ -836,12 +838,14 @@ static void DrawClock(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar, gui
     // ----------------------------------------------------
     // TOP LEFT: Digital Clock (24h format, size 4, black)
     // ----------------------------------------------------
-    uint16_t cS = 4;
-    uint16_t nD = 2;
-    uint16_t time_width = 2 * (nD * (11 * cS + 2) - 2 * cS) + 4 * cS;
-    int16_t time_x = 6 + (224 - time_width) / 2;
-    int16_t time_y = 6 + (106 - 84) / 2;
-    DrawTime(gfx, tm, time_x, time_y, cS, nD, GFX_BLACK);
+    if (!data->is_sleep) {
+        uint16_t cS = 4;
+        uint16_t nD = 2;
+        uint16_t time_width = 2 * (nD * (11 * cS + 2) - 2 * cS) + 4 * cS;
+        int16_t time_x = 6 + (224 - time_width) / 2;
+        int16_t time_y = 6 + (106 - 84) / 2;
+        DrawTime(gfx, tm, time_x, time_y, cS, nD, GFX_BLACK);
+    }
 
     // ----------------------------------------------------
     // TOP RIGHT: Date, Battery (Voltage), Temperature, BLE Name
@@ -1305,15 +1309,10 @@ static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar,
     GFX_printf(gfx, "%s", left_bottom);
 
     // 3. Draw Right Part (x = 201..399)
-    // Top: digital clock
-    char time_str[16];
-    snprintf(time_str, sizeof(time_str), "%02d:%02d", tm->tm_hour, tm->tm_min);
-    GFX_setFont(gfx, u8g2_font_unifont_t_vietnamese1);
-    GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
-    uint16_t w_time = GFX_getUTF8Width(gfx, time_str);
-    int16_t time_x = 200 + (200 - w_time) / 2;
-    GFX_setCursor(gfx, time_x, 16);
-    GFX_printf(gfx, "%s", time_str);
+    // Top: digital clock in 7-segment LED style (cS = 1, nD = 2, fC = GFX_BLACK)
+    if (!data->is_sleep) {
+        DrawTime(gfx, tm, 273, 2, 1, 2, GFX_BLACK);
+    }
 
     // Bottom: date formatted as "thứ ... ngày/tháng/năm"
     char date_str[64];
@@ -1324,7 +1323,7 @@ static void DrawTimetable(Adafruit_GFX* gfx, tm_t* tm, struct Lunar_Date* Lunar,
     GFX_setTextColor(gfx, GFX_BLACK, GFX_WHITE);
     uint16_t w_date = GFX_getUTF8Width(gfx, date_str);
     int16_t date_x = 200 + (200 - w_date) / 2;
-    GFX_setCursor(gfx, date_x, 40);
+    GFX_setCursor(gfx, date_x, 43);
     GFX_printf(gfx, "%s", date_str);
 }
 

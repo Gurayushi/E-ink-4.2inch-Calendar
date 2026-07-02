@@ -81,6 +81,7 @@ void EPD_GPIO_Init(void) {
     spi_config.sck_pin = EPD_SCLK_PIN;
     spi_config.mosi_pin = EPD_MOSI_PIN;
     spi_config.ss_pin = EPD_CS_PIN;
+    spi_config.frequency = NRF_DRV_SPI_FREQ_2M; // Lower frequency for SPI signal stability
 #if defined(S112)
     APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, NULL, NULL));
 #else

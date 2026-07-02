@@ -69,6 +69,7 @@ async function epdWrite(cmd, data) {
     if (noReplyCount > 0) {
       await write(EpdCmd.SEND_DATA, data.slice(i, i + chunkSize), false);
       noReplyCount--;
+      await new Promise(resolve => setTimeout(resolve, 25)); // Delay 25ms for BLE buffer stability
     } else {
       await write(EpdCmd.SEND_DATA, data.slice(i, i + chunkSize), true);
       noReplyCount = interleavedCount;

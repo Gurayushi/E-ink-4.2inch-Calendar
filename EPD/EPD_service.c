@@ -32,6 +32,33 @@
 #endif
 
 
+static bool is_in_sleep_schedule(ble_epd_t* p_epd, uint32_t timestamp) {
+    tm_t tm;
+    transformTime(timestamp, &tm);
+    int day_idx = (tm.tm_wday == 0) ? 6 : (tm.tm_wday - 1);
+    bool override_active = (p_epd->config.always_run_days & (1 << day_idx)) != 0;
+    if (!override_active) {
+        for (int i = 0; i < 4; i++) {
+            if (p_epd->config.sleep_start[day_idx][i] < 24 && p_epd->config.sleep_end[day_idx][i] < 24) {
+                uint8_t start = p_epd->config.sleep_start[day_idx][i];
+                uint8_t end = p_epd->config.sleep_end[day_idx][i];
+                if (start != end) {
+                    if (start < end) {
+                        if (tm.tm_hour >= start && tm.tm_hour < end) {
+                            return true;
+                        }
+                    } else { // crosses midnight
+                        if (tm.tm_hour >= start || tm.tm_hour < end) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     epd_gui_update_event_t* event = (epd_gui_update_event_t*)p_event_data;
     ble_epd_t* p_epd = event->p_epd;
@@ -64,7 +91,8 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
             .target_timestamp = p_epd->config.event_timestamp,
             .name = {0}
         },
-        .update_header_only = true
+        .update_header_only = true,
+        .is_sleep = is_in_sleep_schedule(p_epd, event->timestamp)
     };
     int i_evt;
     for (i_evt = 0; i_evt < 31 && p_epd->config.event_name[i_evt] != '\0'; i_evt++) {
@@ -96,6 +124,10 @@ static void epd_gui_update(void* p_event_data, uint16_t event_size) {
     }
     EPD_GPIO_Uninit();
 
+    if (data.is_sleep && (data.mode == MODE_CLOCK || data.mode == MODE_TIMETABLE || data.mode == MODE_NOTE_COUNTDOWN)) {
+        p_epd->sleep_screen_cleared = true;
+    }
+
     app_feed_wdt();
 }
 
@@ -117,6 +149,7 @@ static void on_connect(ble_epd_t* p_epd, ble_evt_t* p_ble_evt) {
 static void on_disconnect(ble_epd_t* p_epd, ble_evt_t* p_ble_evt) {
     UNUSED_PARAMETER(p_ble_evt);
     p_epd->conn_handle = BLE_CONN_HANDLE_INVALID;
+    p_epd->is_receiving_image = false; // Reset image receiving state on disconnect
     if (p_epd->epd) {
         EPD_GPIO_Init();
         p_epd->epd->drv->sleep(p_epd->epd);
@@ -172,10 +205,15 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             break;
 
         case EPD_CMD_INIT:
+            p_epd->is_receiving_image = true; // Suspend clock updates while uploading image
             p_epd->epd = epd_init((epd_model_id_t)(length > 1 ? p_data[1] : p_epd->config.model_id));
             if (p_epd->epd->id != p_epd->config.model_id) {
                 p_epd->config.model_id = p_epd->epd->id;
                 epd_config_write(&p_epd->config);
+            }
+            if (p_epd->epd) {
+                p_epd->epd->drv->init(p_epd->epd);
+                p_epd->epd->drv->clear(p_epd->epd, false); // Clear RAM to white without screen refresh
             }
             epd_send_mtu(p_epd);
             epd_send_time(p_epd);
@@ -199,6 +237,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             break;
 
         case EPD_CMD_REFRESH:
+            p_epd->is_receiving_image = false; // Done receiving image
             if (p_epd->config.display_mode != MODE_TIMETABLE && p_epd->config.display_mode != MODE_NOTE_COUNTDOWN) {
                 epd_update_display_mode(p_epd, MODE_PICTURE);
                 if (p_epd->epd) p_epd->epd->drv->refresh(p_epd->epd, false);
@@ -208,6 +247,7 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             break;
 
         case EPD_CMD_SLEEP:
+            p_epd->is_receiving_image = false; // Done receiving image
             if (p_epd->epd) p_epd->epd->drv->sleep(p_epd->epd);
             break;
 
@@ -340,13 +380,16 @@ static void epd_service_on_write(ble_epd_t* p_epd, uint8_t* p_data, uint16_t len
             
             epd_config_write(&p_epd->config);
             
-            ble_epd_on_timer(p_epd, timestamp(), 0);
+            if (day_idx == 6) {
+                ble_epd_on_timer(p_epd, timestamp(), 0);
+            }
             break;
         }
 
 
 
         case EPD_CMD_WRITE_IMAGE:  // MSB=0000: ram begin, LSB=1111: black
+            p_epd->is_receiving_image = true; // Suspend clock updates while uploading image
             if (length < 3) break;
             if (p_epd->epd) p_epd->epd->drv->write_ram(p_epd->epd, p_data[1], &p_data[2], length - 2);
             break;
@@ -575,41 +618,25 @@ uint32_t ble_epd_string_send(ble_epd_t* p_epd, uint8_t* p_string, uint16_t lengt
 }
 
 void ble_epd_on_timer(ble_epd_t* p_epd, uint32_t timestamp, uint8_t update_type) {
-    if (update_type != 1 && p_epd->config.display_mode != MODE_PICTURE) {
-        tm_t tm;
-        transformTime(timestamp, &tm);
-        
-        int day_idx = (tm.tm_wday == 0) ? 6 : (tm.tm_wday - 1);
-        
-        bool override_active = (p_epd->config.always_run_days & (1 << day_idx)) != 0;
-        
-        if (!override_active) {
-            for (int i = 0; i < 4; i++) {
-                if (p_epd->config.sleep_start[day_idx][i] < 24 && p_epd->config.sleep_end[day_idx][i] < 24) {
-                    uint8_t start = p_epd->config.sleep_start[day_idx][i];
-                    uint8_t end = p_epd->config.sleep_end[day_idx][i];
-                    if (start != end) {
-                        bool is_inside = false;
-                        if (start < end) {
-                            if (tm.tm_hour >= start && tm.tm_hour < end) {
-                                is_inside = true;
-                            }
-                        } else { // crosses midnight, e.g. 22 to 6
-                            if (tm.tm_hour >= start || tm.tm_hour < end) {
-                                is_inside = true;
-                            }
-                        }
-                        if (is_inside) {
-                            return; // SKIP REFRESH!
-                        }
-                    }
-                }
+    if (p_epd->is_receiving_image) {
+        return; // Suspend all timer-based display updates while actively receiving BLE image data
+    }
+    bool force_sleep_clear = false;
+    bool in_sleep = (p_epd->config.display_mode != MODE_PICTURE) && is_in_sleep_schedule(p_epd, timestamp);
+    
+    if (in_sleep) {
+        if (update_type != 1) {
+            if (p_epd->sleep_screen_cleared) {
+                return; // SKIP REFRESH! Screen is already white.
             }
+            force_sleep_clear = true;
         }
+    } else {
+        p_epd->sleep_screen_cleared = false; // Reset when awake
     }
 
-    // Update calendar on 00:00:00, clock on every minute
-    if (update_type == 1 || update_type == 2 || 
+    // Update calendar on 00:00:00, clock on every minute, or if we need to force sleep clear
+    if (update_type == 1 || update_type == 2 || force_sleep_clear ||
         (p_epd->config.display_mode == MODE_CALENDAR && timestamp % 86400 == 0) ||
         (p_epd->config.display_mode > MODE_CALENDAR && timestamp % 60 == 0)) {
         epd_gui_update_event_t event = {p_epd, timestamp, update_type};

@@ -103,6 +103,8 @@ typedef struct {
     epd_config_t config;          /**< EPD config */
     weather_data_t weather;       /**< Weather data in RAM */
     timetable_data_t timetable;   /**< Timetable data in RAM */
+    bool sleep_screen_cleared;
+    bool is_receiving_image;
 } ble_epd_t;
 
 typedef struct {

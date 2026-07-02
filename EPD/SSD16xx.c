@@ -34,10 +34,11 @@ static void SSD16xx_SetWindow(epd_model_t* epd, uint16_t x, uint16_t y, uint16_t
 }
 
 void SSD16xx_Init(epd_model_t* epd) {
-    EPD_Reset(true, 10);
+    EPD_Reset(true, 50);
+    SSD16xx_WaitBusy(500); // Wait for the display controller to finish booting up from hardware reset
 
     EPD_WriteCmd(SSD16xx_SW_RESET);
-    SSD16xx_WaitBusy(200);
+    SSD16xx_WaitBusy(500);
 
     EPD_Write(SSD16xx_BORDER_CTRL, 0x01);
     EPD_Write(SSD16xx_TSENSOR_CTRL, 0x80);
@@ -110,6 +111,7 @@ void SSD16xx_WriteRam(epd_model_t* epd, uint8_t cfg, uint8_t* data, uint8_t len)
         else
             EPD_WriteCmd(SSD16xx_WRITE_RAM1);
     }
+
     EPD_WriteData(data, len);
 }
 

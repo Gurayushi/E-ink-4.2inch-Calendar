@@ -121,6 +121,7 @@ async function writeImage(data, step = 'bw') {
     if (noReplyCount > 0) {
       await write(EpdCmd.WRITE_IMG, payload, false);
       noReplyCount--;
+      await new Promise(resolve => setTimeout(resolve, 25)); // Delay 25ms for BLE buffer stability
     } else {
       await write(EpdCmd.WRITE_IMG, payload, true);
       noReplyCount = interleavedCount;

@@ -52,6 +52,7 @@ typedef struct {
     timetable_data_t timetable;
     note_event_t note_event;
     bool update_header_only;
+    bool is_sleep;
 } gui_data_t;
 
 void DrawGUI(gui_data_t* data, buffer_callback callback, void* callback_data);
