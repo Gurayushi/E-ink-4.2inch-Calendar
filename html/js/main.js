@@ -136,9 +136,6 @@ async function setDriver() {
 }
 
 async function syncTime(mode, skipRefresh = false) {
-  if (mode === 2) {
-    if (!await showCustomConfirm(i18n[currentLang].clock_mode_warning)) return;
-  }
   const timestamp = new Date().getTime() / 1000;
   const data = new Uint8Array([
     (timestamp >> 24) & 0xFF,
@@ -150,6 +147,7 @@ async function syncTime(mode, skipRefresh = false) {
     skipRefresh ? 0 : 1
   ]);
   if (await write(EpdCmd.SET_TIME, data)) {
+    window.currentDisplayMode = mode; // Sync local display mode state with the device
     addLog(i18n[currentLang].time_synced);
     addLog(i18n[currentLang].wait_refresh);
   }
