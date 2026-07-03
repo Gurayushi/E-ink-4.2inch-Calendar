@@ -241,6 +241,19 @@ async function sendimg() {
   updateButtonStatus(true);
 
   try {
+    // Force transition to MODE_PICTURE (0) first, so EPD REFRESH actually draws the general image
+    // instead of trying to redraw the active timetable/note layouts
+    addLog("Đang chuyển đồng hồ sang Chế độ Truyền Ảnh...");
+    const syncSuccess = await syncTime(0, true);
+    if (!syncSuccess) {
+      addLog("❌ Lỗi: Không thể chuyển chế độ Truyền Ảnh.");
+      await showCustomAlert("❌ Lỗi: Không thể chuyển chế độ Truyền Ảnh trên đồng hồ.");
+      updateButtonStatus();
+      status.parentElement.style.display = "none";
+      return;
+    }
+    await new Promise(r => setTimeout(r, 500)); // Delay to allow device to save config and initialize
+
     if (!await write(EpdCmd.INIT)) {
       addLog("❌ Lỗi: Khởi tạo EPD thất bại.");
       await showCustomAlert("❌ Lỗi: Không thể khởi tạo màn hình EPD. Vui lòng kết nối lại Bluetooth!");
