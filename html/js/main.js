@@ -122,7 +122,10 @@ async function writeImage(data, step = 'bw') {
     if (noReplyCount > 0) {
       success = await write(EpdCmd.WRITE_IMG, payload, false);
       noReplyCount--;
-      await new Promise(resolve => setTimeout(resolve, 35)); // Increased to 35ms to stabilize nRF5 BLE buffer and prevent queue overflow
+      // Dynamically adjust delay based on chunkSize:
+      // larger chunk sizes mean fewer packets, so we can use a shorter delay safely.
+      const delayTime = chunkSize > 100 ? 10 : 20;
+      await new Promise(resolve => setTimeout(resolve, delayTime));
     } else {
       success = await write(EpdCmd.WRITE_IMG, payload, true);
       noReplyCount = interleavedCount;
