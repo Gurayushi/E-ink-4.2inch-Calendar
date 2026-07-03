@@ -229,33 +229,70 @@
     const w = parseInt(document.getElementById('tt-tb-width')?.value);
     const h = parseInt(document.getElementById('tt-tb-height')?.value);
     
+    // Scale column widths to sum up to exactly FULL_W (400) without jumping the active column
     if (!isNaN(w) && w >= 10 && w <= FULL_W) {
-      colWidths[selectedCell.c] = w;
+      const maxW = FULL_W - (colWidths.length - 1) * 10;
+      const clampedW = Math.max(10, Math.min(w, maxW));
+      colWidths[selectedCell.c] = clampedW;
+      
+      const otherSumW = colWidths.reduce((sum, width, idx) => idx === selectedCell.c ? sum : sum + width, 0);
+      if (otherSumW > 0) {
+        const remainingW = FULL_W - clampedW;
+        const scaleX = remainingW / otherSumW;
+        colWidths = colWidths.map((width, idx) => {
+          if (idx === selectedCell.c) return clampedW;
+          return Math.floor(width * scaleX);
+        });
+        const newSumW = colWidths.reduce((a, b) => a + b, 0);
+        if (newSumW !== FULL_W && colWidths.length > 0) {
+          const adjustIdx = selectedCell.c === colWidths.length - 1 ? 0 : colWidths.length - 1;
+          colWidths[adjustIdx] += (FULL_W - newSumW);
+        }
+      }
     }
+
+    // Scale row heights to sum up to exactly TABLE_H (250) without jumping the active row
     if (!isNaN(h) && h >= 10 && h <= FULL_H) {
-      rowHeights[selectedCell.r] = h;
-    }
-
-    // Scale column widths to sum up to exactly FULL_W (400)
-    const totalW = colWidths.reduce((a, b) => a + b, 0);
-    if (totalW > 0) {
-      const scaleX = FULL_W / totalW;
-      colWidths = colWidths.map(w => Math.floor(w * scaleX));
-      const sumW = colWidths.reduce((a, b) => a + b, 0);
-      if (sumW !== FULL_W && colWidths.length > 0) colWidths[colWidths.length - 1] += (FULL_W - sumW);
-    }
-
-    // Scale row heights to sum up to exactly TABLE_H (250)
-    const totalH = rowHeights.reduce((a, b) => a + b, 0);
-    if (totalH > 0) {
-      const scaleY = TABLE_H / totalH;
-      rowHeights = rowHeights.map(h => Math.floor(h * scaleY));
-      const sumH = rowHeights.reduce((a, b) => a + b, 0);
-      if (sumH !== TABLE_H && rowHeights.length > 0) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+      const maxH = TABLE_H - (rowHeights.length - 1) * 10;
+      const clampedH = Math.max(10, Math.min(h, maxH));
+      rowHeights[selectedCell.r] = clampedH;
+      
+      const otherSumH = rowHeights.reduce((sum, height, idx) => idx === selectedCell.r ? sum : sum + height, 0);
+      if (otherSumH > 0) {
+        const remainingH = TABLE_H - clampedH;
+        const scaleY = remainingH / otherSumH;
+        rowHeights = rowHeights.map((height, idx) => {
+          if (idx === selectedCell.r) return clampedH;
+          return Math.floor(height * scaleY);
+        });
+        const newSumH = rowHeights.reduce((a, b) => a + b, 0);
+        if (newSumH !== TABLE_H && rowHeights.length > 0) {
+          const adjustIdx = selectedCell.r === rowHeights.length - 1 ? 0 : rowHeights.length - 1;
+          rowHeights[adjustIdx] += (TABLE_H - newSumH);
+        }
+      }
     }
     
     saveState();
-    buildTableDOM();
+    
+    // Smooth DOM Update: instead of rebuilding DOM, update style properties directly to keep focus & prevent jumping
+    colWidths.forEach((width, c) => {
+      document.querySelectorAll(`.tt-cell[data-c="${c}"]`).forEach(td => {
+        td.style.minWidth = Math.max(40, width) + 'px';
+      });
+      const table = document.getElementById('tt-main-table');
+      if (table && table.tHead) {
+        const ths = table.tHead.querySelectorAll('.tt-col-header');
+        if (ths[c]) ths[c].style.minWidth = Math.max(40, width) + 'px';
+      }
+    });
+
+    rowHeights.forEach((height, r) => {
+      document.querySelectorAll(`.tt-cell[data-r="${r}"]`).forEach(td => {
+        td.style.height = height + 'px';
+      });
+    });
+
     renderPreview();
   };
 

@@ -265,16 +265,20 @@
 									<option value="right">→ Phải</option>
 								</select>
 							</div>
-							<!-- Size Controls -->
-							<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
-								<span class="tt-tb-label">Rộng</span>
-								<input type="range" id="tt-tb-width-slider" min="10" max="400" value="40" style="width: 120px; cursor: pointer;" oninput="document.getElementById('tt-tb-width').value = this.value; window.ttApplySize()">
-								<input type="number" id="tt-tb-width" title="Độ rộng cột (px)" min="10" max="400" style="width: 45px; padding: 2px;" onchange="document.getElementById('tt-tb-width-slider').value = this.value; window.ttApplySize()">
-							</div>
-							<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
-								<span class="tt-tb-label">Cao</span>
-								<input type="range" id="tt-tb-height-slider" min="10" max="300" value="30" style="width: 120px; cursor: pointer;" oninput="document.getElementById('tt-tb-height').value = this.value; window.ttApplySize()">
-								<input type="number" id="tt-tb-height" title="Chiều cao hàng (px)" min="10" max="300" style="width: 45px; padding: 2px;" onchange="document.getElementById('tt-tb-height-slider').value = this.value; window.ttApplySize()">
+							<!-- Size Controls Block -->
+							<div class="tt-size-sliders-block" style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border-color, #e0e0e0); padding-top: 8px;">
+								<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
+									<span class="tt-tb-label" style="width: 40px;">Cao</span>
+									<input type="range" id="tt-tb-height-slider" min="10" max="300" value="30" style="flex-grow: 1; max-width: 250px; cursor: pointer;" oninput="document.getElementById('tt-tb-height').value = this.value; window.ttApplySize()">
+									<input type="number" id="tt-tb-height" title="Chiều cao hàng (px)" min="10" max="300" style="width: 50px; padding: 2px;" onchange="document.getElementById('tt-tb-height-slider').value = this.value; window.ttApplySize()">
+									<span style="font-size: 0.8em; color: var(--text-secondary, #5f6368);">(Hàng được chọn)</span>
+								</div>
+								<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
+									<span class="tt-tb-label" style="width: 40px;">Rộng</span>
+									<input type="range" id="tt-tb-width-slider" min="10" max="400" value="40" style="flex-grow: 1; max-width: 250px; cursor: pointer;" oninput="document.getElementById('tt-tb-width').value = this.value; window.ttApplySize()">
+									<input type="number" id="tt-tb-width" title="Độ rộng cột (px)" min="10" max="400" style="width: 50px; padding: 2px;" onchange="document.getElementById('tt-tb-width-slider').value = this.value; window.ttApplySize()">
+									<span style="font-size: 0.8em; color: var(--text-secondary, #5f6368);">(Cột được chọn)</span>
+								</div>
 							</div>
 							<!-- Structure Control -->
 							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto; display: flex; gap: 4px;">
