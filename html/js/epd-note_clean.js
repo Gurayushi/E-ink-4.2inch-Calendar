@@ -332,12 +332,10 @@
     payload[2] = (timestampSec >> 8) & 0xff;
     payload[3] = timestampSec & 0xff;
     payload.set(nameBytes, 4);
-    // Auto-switch device to Note & Countdown mode (4) first if not already set
-    if (window.currentDisplayMode !== 4) {
-      addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
-      await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
-    }
+    // Always switch device to Note & Countdown mode (4) first to ensure partial window is configured correctly
+    addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
+    await syncTime(4, true);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
 
     // Send EPD_CMD_SET_EVENT (0x25)
     startTime = new Date().getTime();
@@ -391,12 +389,10 @@
 
     updateButtonStatus(true);
 
-    // Auto-switch device to Note & Countdown mode (4) first if not already set
-    if (window.currentDisplayMode !== 4) {
-      addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
-      await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
-    }
+    // Always switch device to Note & Countdown mode (4) first to ensure partial window is configured correctly
+    addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
+    await syncTime(4, true);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
 
     // EPD_CMD_INIT
     await write(EpdCmd.INIT);

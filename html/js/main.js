@@ -118,13 +118,24 @@ async function writeImage(data, step = 'bw') {
       (step == 'bw' ? 0x0F : 0x00) | (i == 0 ? 0x00 : 0xF0),
       ...data.slice(i, i + chunkSize),
     ];
+    let success = false;
     if (noReplyCount > 0) {
-      await write(EpdCmd.WRITE_IMG, payload, false);
+      success = await write(EpdCmd.WRITE_IMG, payload, false);
       noReplyCount--;
-      await new Promise(resolve => setTimeout(resolve, 25)); // Delay 25ms for BLE buffer stability
+      await new Promise(resolve => setTimeout(resolve, 35)); // Increased to 35ms to stabilize nRF5 BLE buffer and prevent queue overflow
     } else {
-      await write(EpdCmd.WRITE_IMG, payload, true);
+      success = await write(EpdCmd.WRITE_IMG, payload, true);
       noReplyCount = interleavedCount;
+    }
+    if (!success) {
+      addLog("Gửi dữ liệu ảnh BLE thất bại. Đang dừng truyền...");
+      updateButtonStatus(false);
+      const progressEl = document.getElementById("transfer-progress");
+      if (progressEl) {
+        progressEl.style.display = "none";
+        progressEl.value = 0;
+      }
+      throw new Error("BLE Write Failed");
     }
     chunkIdx++;
   }
@@ -146,11 +157,18 @@ async function syncTime(mode, skipRefresh = false) {
     mode,
     skipRefresh ? 0 : 1
   ]);
+  // Always send EpdCmd.SLEEP to reset the is_receiving_image state on the device.
+  // This resolves the issue where a previous failed or partial transfer left
+  // the device in the is_receiving_image = true state, causing it to ignore mode changes.
+  await write(EpdCmd.SLEEP);
+
   if (await write(EpdCmd.SET_TIME, data)) {
     window.currentDisplayMode = mode; // Sync local display mode state with the device
     addLog(i18n[currentLang].time_synced);
     addLog(i18n[currentLang].wait_refresh);
+    return true;
   }
+  return false;
 }
 
 async function clearScreen() {
@@ -222,43 +240,63 @@ async function sendimg() {
 
   updateButtonStatus(true);
 
-  await write(EpdCmd.INIT);
-
-  if (ditherMode === 'threeColor') {
-    const halfLength = Math.floor(processedData.length / 2);
-    const blackWhiteData = processedData.slice(0, halfLength);
-    const redWhiteData = processedData.slice(halfLength);
-    if (epdDriverSelect.value === '08' || epdDriverSelect.value === '09') {
-      await writeImage(convertUC8159(blackWhiteData, redWhiteData), 'bw');
-    } else {
-      await writeImage(blackWhiteData, 'bw');
-      await writeImage(redWhiteData, 'red');
+  try {
+    if (!await write(EpdCmd.INIT)) {
+      addLog("❌ Lỗi: Khởi tạo EPD thất bại.");
+      await showCustomAlert("❌ Lỗi: Không thể khởi tạo màn hình EPD. Vui lòng kết nối lại Bluetooth!");
+      updateButtonStatus();
+      status.parentElement.style.display = "none";
+      return;
     }
-  } else if (ditherMode === 'blackWhiteColor') {
-    if (epdDriverSelect.value === '08' || epdDriverSelect.value === '09') {
-      const emptyData = new Uint8Array(processedData.length).fill(0xFF);
-      await writeImage(convertUC8159(processedData, emptyData), 'bw');
-    } else {
+
+    if (ditherMode === 'threeColor') {
+      const halfLength = Math.floor(processedData.length / 2);
+      const blackWhiteData = processedData.slice(0, halfLength);
+      const redWhiteData = processedData.slice(halfLength);
+      if (epdDriverSelect.value === '08' || epdDriverSelect.value === '09') {
+        await writeImage(convertUC8159(blackWhiteData, redWhiteData), 'bw');
+      } else {
+        await writeImage(blackWhiteData, 'bw');
+        await writeImage(redWhiteData, 'red');
+      }
+    } else if (ditherMode === 'blackWhiteColor') {
+      if (epdDriverSelect.value === '08' || epdDriverSelect.value === '09') {
+        const emptyData = new Uint8Array(processedData.length).fill(0xFF);
+        await writeImage(convertUC8159(processedData, emptyData), 'bw');
+      } else {
+        await writeImage(processedData, 'bw');
+      }
+    } else if (ditherMode === 'fourColor' || ditherMode === 'sixColor') {
       await writeImage(processedData, 'bw');
+    } else {
+      addLog("Firmware hiện tại không hỗ trợ chế độ màu này.");
+      await showCustomAlert("❌ Chế độ màu này chưa được hỗ trợ bởi Firmware!");
+      updateButtonStatus();
+      status.parentElement.style.display = "none";
+      return;
     }
-  } else if (ditherMode === 'fourColor' || ditherMode === 'sixColor') {
-    await writeImage(processedData, 'bw');
-  } else {
-    addLog("Firmware hiện tại không hỗ trợ chế độ màu này.");
+
+    if (!await write(EpdCmd.REFRESH)) {
+      addLog("❌ Lỗi: Làm mới màn hình thất bại.");
+      await showCustomAlert("❌ Lỗi: Làm mới màn hình thất bại!");
+      updateButtonStatus();
+      status.parentElement.style.display = "none";
+      return;
+    }
+
+    const sendTime = (new Date().getTime() - startTime) / 1000.0;
+    addLog(`Gửi hoàn thành! Thời gian: ${sendTime}s`);
+    setStatus(`Gửi hoàn thành! Thời gian: ${sendTime}s`);
+    addLog("Vui lòng không thao tác trước khi màn hình làm mới xong.");
+    setTimeout(() => {
+      status.parentElement.style.display = "none";
+    }, 5000);
+  } catch (err) {
+    addLog('❌ Lỗi truyền ảnh: ' + err.message);
+    await showCustomAlert('❌ Có lỗi xảy ra trong quá trình truyền ảnh: ' + err.message);
     updateButtonStatus();
-    return;
-  }
-
-  await write(EpdCmd.REFRESH);
-  updateButtonStatus();
-
-  const sendTime = (new Date().getTime() - startTime) / 1000.0;
-  addLog(`Gửi hoàn thành! Thời gian: ${sendTime}s`);
-  setStatus(`Gửi hoàn thành! Thời gian: ${sendTime}s`);
-  addLog("Vui lòng không thao tác trước khi màn hình làm mới xong.");
-  setTimeout(() => {
     status.parentElement.style.display = "none";
-  }, 5000);
+  }
 }
 
 async function downloadDataArray() {
@@ -313,7 +351,8 @@ function updateButtonStatus(forceDisabled = false) {
   document.getElementById("sendcmdbutton").disabled = status;
   document.getElementById("calendarmodebutton").disabled = status;
   document.getElementById("clockmodebutton").disabled = status;
-  document.getElementById("syncweatherbutton").disabled = status;
+  const syncDataBtn = document.getElementById("syncdatabutton");
+  if (syncDataBtn) syncDataBtn.disabled = status;
   document.getElementById("clearscreenbutton").disabled = status;
   document.getElementById("sendimgbutton").disabled = status;
   document.getElementById("setDriverbutton").disabled = status;
@@ -930,6 +969,18 @@ async function syncWeather() {
   }
 }
 
+async function syncData() {
+  if (!epdCharacteristic) {
+    await showCustomAlert("Vui lòng kết nối Bluetooth với đồng hồ trước!");
+    return;
+  }
+  addLog("Bắt đầu đồng bộ dữ liệu...");
+  // 1. Đồng bộ thời gian (mode=255 means keep current mode)
+  await syncTime(255);
+  // 2. Đồng bộ thời tiết
+  await syncWeather();
+}
+
 async function syncWeatherByIP() {
   addLog("Getting location by IP...");
   try {
@@ -1350,3 +1401,15 @@ function toggleFieldset(legend) {
     fieldset.classList.toggle('collapsed');
   }
 }
+
+function expandAndScrollToFieldset(fieldsetId) {
+  const fieldset = document.getElementById(fieldsetId);
+  if (!fieldset) return;
+  if (fieldset.classList.contains('collapsed')) {
+    fieldset.classList.remove('collapsed');
+  }
+  fieldset.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Call updateButtonStatus initially to disable control buttons until Bluetooth is connected
+updateButtonStatus();

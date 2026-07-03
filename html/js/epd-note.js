@@ -395,12 +395,10 @@
     payload[3] = timestampSec & 0xff;
     payload.set(nameBytes, 4);
 
-    // Auto-switch device to Note & Countdown mode (4) first if not already set
-    if (window.currentDisplayMode !== 4) {
-      addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
-      await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
-    }
+    // Always switch device to Note & Countdown mode (4) first to ensure partial window is configured correctly
+    addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
+    await syncTime(4, true);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
 
     // Send EPD_CMD_SET_EVENT (0x25)
     startTime = new Date().getTime();
@@ -462,64 +460,84 @@
 
     updateButtonStatus(true);
 
-    // Auto-switch device to Note & Countdown mode (4) first if not already set
-    if (window.currentDisplayMode !== 4) {
+    try {
+      // Always switch device to Note & Countdown mode (4) first to ensure partial window is configured correctly
       addLog('Đang chuyển đồng hồ sang Chế độ Ghi chú & Đếm ngược...');
-      await syncTime(4, true);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay to allow device to save config and initialize
-    }
-
-    if (!window.skipNoteEventSync) {
-      window.skipNoteEventSync = true;
-      const name = document.getElementById('epd-event-name').value.trim();
-      const datetimeStr = document.getElementById('epd-event-dt').value;
-      if (name && datetimeStr) {
-        const targetDate = new Date(datetimeStr);
-        const timestampSec = Math.floor(targetDate.getTime() / 1000);
-        const nameBytes = new TextEncoder().encode(name);
-        const payload = new Uint8Array(4 + nameBytes.length);
-        payload[0] = (timestampSec >> 24) & 0xff;
-        payload[1] = (timestampSec >> 16) & 0xff;
-        payload[2] = (timestampSec >> 8) & 0xff;
-        payload[3] = timestampSec & 0xff;
-        payload.set(nameBytes, 4);
-
-        addLog(`Gửi sự kiện trước khi gửi ghi chú: "${name}"`);
-        await write(0x25, payload, true);
+      const syncSuccess = await syncTime(4, true);
+      if (!syncSuccess) {
+        addLog('❌ Lỗi: Không thể chuyển chế độ trên đồng hồ.');
+        alert('❌ Lỗi: Không thể chuyển chế độ trên đồng hồ.');
+        return;
       }
+      await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 2000ms to 500ms to minimize pin float time and speed up UI
+
+      if (!window.skipNoteEventSync) {
+        window.skipNoteEventSync = true;
+        const name = document.getElementById('epd-event-name').value.trim();
+        const datetimeStr = document.getElementById('epd-event-dt').value;
+        if (name && datetimeStr) {
+          const targetDate = new Date(datetimeStr);
+          const timestampSec = Math.floor(targetDate.getTime() / 1000);
+          const nameBytes = new TextEncoder().encode(name);
+          const payload = new Uint8Array(4 + nameBytes.length);
+          payload[0] = (timestampSec >> 24) & 0xff;
+          payload[1] = (timestampSec >> 16) & 0xff;
+          payload[2] = (timestampSec >> 8) & 0xff;
+          payload[3] = timestampSec & 0xff;
+          payload.set(nameBytes, 4);
+
+          addLog(`Gửi sự kiện trước khi gửi ghi chú: "${name}"`);
+          if (!await write(0x25, payload, true)) {
+            addLog('❌ Lỗi: Không thể đồng bộ sự kiện đếm ngược.');
+            alert('❌ Lỗi: Không thể đồng bộ sự kiện đếm ngược.');
+            return;
+          }
+        }
+        window.skipNoteEventSync = false;
+      }
+
+      // EPD_CMD_INIT
+      if (!await write(EpdCmd.INIT)) {
+        addLog('❌ Lỗi: Khởi tạo màn hình EPD thất bại.');
+        alert('❌ Lỗi: Khởi tạo màn hình EPD thất bại.');
+        return;
+      }
+
+      // Write image data to EPD RAM. The driver WriteRam function will automatically set
+      // the window to (200, 0, 200, 300) because display mode is set to MODE_NOTE_COUNTDOWN.
+      if (ditherMode === 'threeColor') {
+        const halfLength = Math.floor(processedData.length / 2);
+        const bwData = processedData.slice(0, halfLength);
+        const redData = processedData.slice(halfLength);
+        await writeImage(bwData, 'bw', 0, 0.5);
+        await writeImage(redData, 'red', 50, 0.5);
+      } else {
+        await writeImage(processedData, 'bw', 0, 1);
+      }
+
+      // Refresh EPD screen
+      if (!await write(EpdCmd.REFRESH)) {
+        addLog('❌ Lỗi: Làm mới màn hình thất bại.');
+        alert('❌ Lỗi: Làm mới màn hình thất bại.');
+        return;
+      }
+
+      const sendTime = ((new Date().getTime() - startTime) / 1000.0).toFixed(1);
+      addLog(`✅ Gửi ghi chú hoàn thành! Thời gian: ${sendTime}s`);
+      alert('✅ Đã đồng bộ thành công cả Ghi chú và Đếm ngược!');
+    } catch (err) {
+      addLog('❌ Lỗi truyền dữ liệu: ' + err.message);
+      alert('❌ Có lỗi xảy ra trong quá trình truyền dữ liệu: ' + err.message);
       window.skipNoteEventSync = false;
+    } finally {
+      if (typeof updateButtonStatus === 'function') updateButtonStatus(false);
+      if (status) status.parentElement.style.display = "none";
+      const progressEl = document.getElementById("transfer-progress");
+      if (progressEl) {
+        progressEl.style.display = "none";
+        progressEl.value = 0;
+      }
     }
-
-    // EPD_CMD_INIT
-    await write(EpdCmd.INIT);
-
-    // Write image data to EPD RAM. The driver WriteRam function will automatically set
-    // the window to (200, 0, 200, 300) because display mode is set to MODE_NOTE_COUNTDOWN.
-    if (ditherMode === 'threeColor') {
-      const halfLength = Math.floor(processedData.length / 2);
-      const bwData = processedData.slice(0, halfLength);
-      const redData = processedData.slice(halfLength);
-      await writeImage(bwData, 'bw', 0, 0.5);
-      await writeImage(redData, 'red', 50, 0.5);
-    } else {
-      await writeImage(processedData, 'bw', 0, 1);
-    }
-
-    // Refresh EPD screen
-    await write(EpdCmd.REFRESH);
-    updateButtonStatus(false);
-
-    const sendTime = ((new Date().getTime() - startTime) / 1000.0).toFixed(1);
-    addLog(`✅ Gửi ghi chú hoàn thành! Thời gian: ${sendTime}s`);
-    if (status) status.parentElement.style.display = "none";
-
-    const progressEl = document.getElementById("transfer-progress");
-    if (progressEl) {
-      progressEl.style.display = "none";
-      progressEl.value = 0;
-    }
-
-    alert('✅ Đã đồng bộ thành công cả Ghi chú và Đếm ngược!');
   };
 
   /**

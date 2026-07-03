@@ -31,13 +31,24 @@
     rowHeights = [];
     for (let r = 0; r < rows; r++) {
       cells.push([]);
-      rowHeights.push(30);
+      rowHeights.push(Math.floor(TABLE_H / rows));
       for (let c = 0; c < cols; c++) {
         cells[r].push(defaultCell());
       }
     }
+    // Adjust rounding error for rowHeights
+    const sumH = rowHeights.reduce((a, b) => a + b, 0);
+    if (sumH !== TABLE_H && rowHeights.length > 0) {
+      rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+
     for (let c = 0; c < cols; c++) {
       colWidths.push(Math.floor(FULL_W / cols));
+    }
+    // Adjust rounding error for colWidths
+    const sumW = colWidths.reduce((a, b) => a + b, 0);
+    if (sumW !== FULL_W && colWidths.length > 0) {
+      colWidths[colWidths.length - 1] += (FULL_W - sumW);
     }
     selectedCell = null;
   }
@@ -58,6 +69,25 @@
       cells      = s.cells;
       colWidths  = s.colWidths;
       rowHeights = s.rowHeights;
+
+      // Automatically scale loaded rowHeights to sum up to exactly TABLE_H
+      const totalH = rowHeights.reduce((a, b) => a + b, 0);
+      if (totalH !== TABLE_H && totalH > 0) {
+        const scaleY = TABLE_H / totalH;
+        rowHeights = rowHeights.map(h => Math.floor(h * scaleY));
+        const sumH = rowHeights.reduce((a, b) => a + b, 0);
+        if (sumH !== TABLE_H) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+      }
+
+      // Automatically scale loaded colWidths to sum up to exactly FULL_W
+      const totalW = colWidths.reduce((a, b) => a + b, 0);
+      if (totalW !== FULL_W && totalW > 0) {
+        const scaleX = FULL_W / totalW;
+        colWidths = colWidths.map(w => Math.floor(w * scaleX));
+        const sumW = colWidths.reduce((a, b) => a + b, 0);
+        if (sumW !== FULL_W) colWidths[colWidths.length - 1] += (FULL_W - sumW);
+      }
+
       return true;
     } catch (e) { return false; }
   }
@@ -205,22 +235,27 @@
     if (!isNaN(h) && h >= 10 && h <= FULL_H) {
       rowHeights[selectedCell.r] = h;
     }
-    
-    saveState();
-    
-    // Dynamically update sizes without rebuilding DOM to avoid losing focus
-    const colCells = document.querySelectorAll(`.tt-cell[data-c="${selectedCell.c}"]`);
-    colCells.forEach(td => td.style.minWidth = Math.max(40, w) + 'px');
-    
-    const table = document.getElementById('tt-main-table');
-    if (table && table.tHead) {
-      const ths = table.tHead.querySelectorAll('.tt-col-header');
-      if (ths[selectedCell.c]) ths[selectedCell.c].style.minWidth = Math.max(40, w) + 'px';
+
+    // Scale column widths to sum up to exactly FULL_W (400)
+    const totalW = colWidths.reduce((a, b) => a + b, 0);
+    if (totalW > 0) {
+      const scaleX = FULL_W / totalW;
+      colWidths = colWidths.map(w => Math.floor(w * scaleX));
+      const sumW = colWidths.reduce((a, b) => a + b, 0);
+      if (sumW !== FULL_W && colWidths.length > 0) colWidths[colWidths.length - 1] += (FULL_W - sumW);
     }
 
-    const rowCells = document.querySelectorAll(`.tt-cell[data-r="${selectedCell.r}"]`);
-    rowCells.forEach(td => td.style.height = h + 'px');
-
+    // Scale row heights to sum up to exactly TABLE_H (250)
+    const totalH = rowHeights.reduce((a, b) => a + b, 0);
+    if (totalH > 0) {
+      const scaleY = TABLE_H / totalH;
+      rowHeights = rowHeights.map(h => Math.floor(h * scaleY));
+      const sumH = rowHeights.reduce((a, b) => a + b, 0);
+      if (sumH !== TABLE_H && rowHeights.length > 0) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+    
+    saveState();
+    buildTableDOM();
     renderPreview();
   };
 
@@ -268,7 +303,17 @@
     const newRow = [];
     for (let c = 0; c < cols; c++) newRow.push(defaultCell());
     cells.splice(r + 1, 0, newRow);
-    rowHeights.splice(r + 1, 0, 30);
+    rowHeights.splice(r + 1, 0, Math.round(TABLE_H / cells.length));
+    
+    // Scale rowHeights to sum up to exactly TABLE_H
+    const totalH = rowHeights.reduce((a, b) => a + b, 0);
+    if (totalH > 0) {
+      const scale = TABLE_H / totalH;
+      rowHeights = rowHeights.map(h => Math.floor(h * scale));
+      const sumH = rowHeights.reduce((a, b) => a + b, 0);
+      if (sumH !== TABLE_H && rowHeights.length > 0) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+
     saveState();
     buildTableDOM();
     renderPreview();
@@ -284,6 +329,16 @@
     const r = selectedCell ? selectedCell.r : cells.length - 1;
     cells.splice(r, 1);
     rowHeights.splice(r, 1);
+    
+    // Scale rowHeights to sum up to exactly TABLE_H
+    const totalH = rowHeights.reduce((a, b) => a + b, 0);
+    if (totalH > 0) {
+      const scale = TABLE_H / totalH;
+      rowHeights = rowHeights.map(h => Math.floor(h * scale));
+      const sumH = rowHeights.reduce((a, b) => a + b, 0);
+      if (sumH !== TABLE_H && rowHeights.length > 0) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+
     selectedCell = null;
     saveState();
     buildTableDOM();
@@ -295,10 +350,17 @@
     cells.forEach(row => {
       row.splice(c + 1, 0, defaultCell());
     });
-    colWidths.splice(c + 1, 0, 80);
+    colWidths.splice(c + 1, 0, Math.round(FULL_W / cells[0].length));
+    
+    // Scale column widths to sum up to exactly FULL_W
     const totalW = colWidths.reduce((a, b) => a + b, 0);
-    const scale = FULL_W / totalW;
-    colWidths = colWidths.map(w => Math.floor(w * scale));
+    if (totalW > 0) {
+      const scale = FULL_W / totalW;
+      colWidths = colWidths.map(w => Math.floor(w * scale));
+      const sumW = colWidths.reduce((a, b) => a + b, 0);
+      if (sumW !== FULL_W && colWidths.length > 0) colWidths[colWidths.length - 1] += (FULL_W - sumW);
+    }
+
     saveState();
     buildTableDOM();
     renderPreview();
@@ -316,9 +378,16 @@
       row.splice(c, 1);
     });
     colWidths.splice(c, 1);
+    
+    // Scale column widths to sum up to exactly FULL_W
     const totalW = colWidths.reduce((a, b) => a + b, 0);
-    const scale = FULL_W / totalW;
-    colWidths = colWidths.map(w => Math.floor(w * scale));
+    if (totalW > 0) {
+      const scale = FULL_W / totalW;
+      colWidths = colWidths.map(w => Math.floor(w * scale));
+      const sumW = colWidths.reduce((a, b) => a + b, 0);
+      if (sumW !== FULL_W && colWidths.length > 0) colWidths[colWidths.length - 1] += (FULL_W - sumW);
+    }
+
     selectedCell = null;
     saveState();
     buildTableDOM();
@@ -331,6 +400,16 @@
     if (cells.length <= 1) return;
     cells.splice(r, 1);
     rowHeights.splice(r, 1);
+    
+    // Scale rowHeights to sum up to exactly TABLE_H
+    const totalH = rowHeights.reduce((a, b) => a + b, 0);
+    if (totalH > 0) {
+      const scale = TABLE_H / totalH;
+      rowHeights = rowHeights.map(h => Math.floor(h * scale));
+      const sumH = rowHeights.reduce((a, b) => a + b, 0);
+      if (sumH !== TABLE_H && rowHeights.length > 0) rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+
     if (selectedCell && selectedCell.r === r) selectedCell = null;
     saveState();
     buildTableDOM();
@@ -521,49 +600,65 @@
 
     const ditherMode = document.getElementById('ditherMode')?.value || 'threeColor';
 
+    startTime = new Date().getTime();
     const status = document.getElementById('status');
     if (status) status.parentElement.style.display = 'block';
     if (typeof updateButtonStatus === 'function') updateButtonStatus(true);
 
-    // Switch to timetable mode (3) if not already
-    if (window.currentDisplayMode !== 3) {
+    try {
+      // Always switch to timetable mode (3) first to ensure device is ready and partial window is configured correctly
       if (typeof addLog === 'function') addLog('Đang chuyển đồng hồ sang Chế độ Thời Khóa Biểu...');
-      await syncTime(3, true);
-      await new Promise(r => setTimeout(r, 2000));
+      const syncSuccess = await syncTime(3, true);
+      if (!syncSuccess) {
+        if (typeof addLog === 'function') addLog('❌ Lỗi: Không thể chuyển chế độ Thời Khóa Biểu.');
+        alert('❌ Lỗi: Không thể chuyển chế độ trên đồng hồ.');
+        return;
+      }
+      await new Promise(r => setTimeout(r, 500)); // Reduced from 2000ms to 500ms to minimize pin float time and speed up UI
+
+      // Process image (dither)
+      const processedData = processImageData(imgData, ditherMode);
+
+      // INIT
+      if (!await write(EpdCmd.INIT)) {
+        if (typeof addLog === 'function') addLog('❌ Lỗi: Khởi tạo màn hình EPD thất bại.');
+        alert('❌ Lỗi: Khởi tạo màn hình EPD thất bại.');
+        return;
+      }
+
+      // Write image to bottom region (0, 50, 400, 250)
+      // Driver WriteRam detects mode=3 and sets correct window automatically
+      if (ditherMode === 'threeColor') {
+        const half  = Math.floor(processedData.length / 2);
+        const bwData  = processedData.slice(0, half);
+        const redData = processedData.slice(half);
+        await writeImage(bwData, 'bw', 0, 0.5);
+        await writeImage(redData, 'red', 50, 0.5);
+      } else {
+        await writeImage(processedData, 'bw', 0, 1);
+      }
+
+      // Refresh EPD
+      if (!await write(EpdCmd.REFRESH)) {
+        if (typeof addLog === 'function') addLog('❌ Lỗi: Làm mới màn hình thất bại.');
+        alert('❌ Lỗi: Làm mới màn hình thất bại.');
+        return;
+      }
+
+      if (typeof addLog === 'function') addLog('✅ Gửi Thời Khóa Biểu thành công!');
+      alert('✅ Đã gửi Thời Khóa Biểu lên đồng hồ thành công!');
+    } catch (err) {
+      if (typeof addLog === 'function') addLog('❌ Lỗi truyền dữ liệu: ' + err.message);
+      alert('❌ Có lỗi xảy ra trong quá trình truyền dữ liệu: ' + err.message);
+    } finally {
+      if (typeof updateButtonStatus === 'function') updateButtonStatus(false);
+      if (status) status.parentElement.style.display = 'none';
+      const progressEl = document.getElementById("transfer-progress");
+      if (progressEl) {
+        progressEl.style.display = "none";
+        progressEl.value = 0;
+      }
     }
-
-    // Process image (dither)
-    const processedData = processImageData(imgData, ditherMode);
-
-    // INIT
-    await write(EpdCmd.INIT);
-
-    // Write image to bottom region (0, 50, 400, 250)
-    // Driver WriteRam detects mode=3 and sets correct window automatically
-    if (ditherMode === 'threeColor') {
-      const half  = Math.floor(processedData.length / 2);
-      const bwData  = processedData.slice(0, half);
-      const redData = processedData.slice(half);
-      await writeImage(bwData, 'bw', 0, 0.5);
-      await writeImage(redData, 'red', 50, 0.5);
-    } else {
-      await writeImage(processedData, 'bw', 0, 1);
-    }
-
-    // Refresh EPD
-    await write(EpdCmd.REFRESH);
-    if (typeof updateButtonStatus === 'function') updateButtonStatus(false);
-
-    if (typeof addLog === 'function') addLog('✅ Gửi Thời Khóa Biểu thành công!');
-    if (status) status.parentElement.style.display = 'none';
-    
-    const progressEl = document.getElementById("transfer-progress");
-    if (progressEl) {
-      progressEl.style.display = "none";
-      progressEl.value = 0;
-    }
-    
-    alert('✅ Đã gửi Thời Khóa Biểu lên đồng hồ thành công!');
   };
 
   // ── Init ─────────────────────────────────────────────────────

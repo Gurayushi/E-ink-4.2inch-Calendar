@@ -11,7 +11,7 @@ const i18n = {
     device_control: "Điều khiển",
     calendar_mode_btn: "Chế độ Lịch",
     clock_mode_btn: "Chế độ Đồng hồ",
-    sync_weather_btn: "Đồng bộ Thời tiết",
+    sync_data_btn: "Đồng bộ dữ liệu",
     clear_screen_btn: "Xóa màn hình",
     send_cmd_btn: "Gửi Lệnh",
     ble_transfer: "Truyền Ảnh",
