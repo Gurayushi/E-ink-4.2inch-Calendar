@@ -306,6 +306,7 @@ async function sendimg() {
     addLog("Vui lòng không thao tác trước khi màn hình làm mới xong.");
     setTimeout(() => {
       status.parentElement.style.display = "none";
+      updateButtonStatus();
     }, 5000);
   } catch (err) {
     addLog('❌ Lỗi truyền ảnh: ' + err.message);
