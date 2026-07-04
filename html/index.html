@@ -7,6 +7,18 @@
 	<title data-i18n="title">Lịch E-Paper</title>
 	<link rel="shortcut icon" type="image/png" href="favicon.png">
 	<link rel="stylesheet" href="css/main.css?v=20260701g">
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style type="tailwindcss">
+		@theme {
+			--color-surface: var(--surface);
+			--color-surface-hover: var(--surface-hover);
+			--color-text-main: var(--text);
+			--color-text-sub: var(--text-secondary);
+			--color-accent: var(--accent);
+			--color-accent-hover: var(--accent-hover);
+			--color-border-custom: var(--border);
+		}
+	</style>
 </head>
 
 <body>
@@ -35,15 +47,15 @@
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div class="flex-container">
-					<div class="flex-group">
-						<button id="connectbutton" type="button" class="primary" onclick="preConnect()" data-i18n="connect_btn">Kết nối</button>
-						<button id="reconnectbutton" type="button" class="secondary" onclick="reConnect()" data-i18n="reconnect_btn">Kết nối lại</button>
-						<button type="button" class="secondary" onclick="clearLog()" data-i18n="clear_log_btn">Xóa Log</button>
+				<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+					<div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+						<button id="connectbutton" type="button" class="primary w-full sm:w-auto py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="preConnect()" data-i18n="connect_btn">Kết nối</button>
+						<button id="reconnectbutton" type="button" class="secondary w-full sm:w-auto py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="reConnect()" data-i18n="reconnect_btn">Kết nối lại</button>
+						<button type="button" class="secondary w-full sm:w-auto py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="clearLog()" data-i18n="clear_log_btn">Xóa Log</button>
 					</div>
-					<div class="flex-group right debug">
-						<label for="epddriver" data-i18n="driver_label">Driver</label>
-						<select id="epddriver" onchange="updateDitcherOptions()">
+					<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto right debug">
+						<label for="epddriver" class="font-semibold text-sm text-text-sub whitespace-nowrap" data-i18n="driver_label">Driver</label>
+						<select id="epddriver" class="w-full sm:w-64 p-2 rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" onchange="updateDitcherOptions()">
 							<option value="03" data-color="threeColor" data-size="4.2_400_300" selected>4.2" (3-Color, UC8176)</option>
 							<option value="01" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, UC8176)</option>
 							<option value="04" data-color="blackWhiteColor" data-size="4.2_400_300">4.2" (B/W, SSD1619)</option>
@@ -59,10 +71,10 @@
 							<option value="0b" data-color="threeColor" data-size="7.5_880_528">7.5" HD (3-Color, SSD1677)</option>
 						</select>
 					</div>
-					<div class="flex-group debug">
-						<label for="epdpins" data-i18n="pin_label">Chân (Pins)</label>
-						<input id="epdpins" type="text" value="">
-						<button id="setDriverbutton" type="button" class="primary" onclick="setDriver()" data-i18n="confirm_btn">Xác nhận</button>
+					<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto debug">
+						<label for="epdpins" class="font-semibold text-sm text-text-sub whitespace-nowrap" data-i18n="pin_label">Chân (Pins)</label>
+						<input id="epdpins" type="text" class="w-full sm:w-32 p-2 rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" value="">
+						<button id="setDriverbutton" type="button" class="primary w-full sm:w-auto py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="setDriver()" data-i18n="confirm_btn">Xác nhận</button>
 					</div>
 				</div>
 				<div class="log-container" id="log"></div>
@@ -74,22 +86,22 @@
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div style="margin-bottom: 12px; font-family: sans-serif; display: flex; align-items: center; gap: 8px;">
-					<label for="weather-city-input" style="font-weight: bold; font-size: 0.9em; min-width: 140px;">Vị trí thời tiết:</label>
-					<input type="text" id="weather-city-input" placeholder="Tự động lấy vị trí..." style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; flex: 1; max-width: 250px; color: black; background: white;">
+				<div class="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
+					<label for="weather-city-input" class="font-bold text-sm text-text-main min-w-[140px]">Vị trí thời tiết:</label>
+					<input type="text" id="weather-city-input" placeholder="Tự động lấy vị trí..." class="w-full sm:max-w-[250px] p-2 rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all">
 				</div>
-				<div class="flex-container">
-					<div class="flex-group">
-						<button id="calendarmodebutton" type="button" class="primary" onclick="syncTime(1, false, true)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
-						<button id="clockmodebutton" type="button" class="primary" onclick="syncTime(2, false, true)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
-						<button id="timetablemodebutton" type="button" class="primary" onclick="expandAndScrollToFieldset('timetable-fieldset')">Chế độ T.Khóa Biểu</button>
-						<button id="notemodebutton" type="button" class="primary" onclick="expandAndScrollToFieldset('note-fieldset')">Chế độ Ghi chú & Đếm ngược</button>
-						<button id="syncdatabutton" type="button" class="primary" onclick="syncData()" data-i18n="sync_data_btn">Đồng bộ dữ liệu</button>
-						<button id="clearscreenbutton" type="button" class="secondary" onclick="clearScreen()" data-i18n="clear_screen_btn">Xóa màn hình</button>
+				<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full lg:w-auto">
+						<button id="calendarmodebutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="syncTime(1, false, true)" data-i18n="calendar_mode_btn">Chế độ Lịch</button>
+						<button id="clockmodebutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="syncTime(2, false, true)" data-i18n="clock_mode_btn">Chế độ Đồng hồ</button>
+						<button id="timetablemodebutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="expandAndScrollToFieldset('timetable-fieldset')">Chế độ T.Khóa Biểu</button>
+						<button id="notemodebutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="expandAndScrollToFieldset('note-fieldset')">Chế độ Ghi chú & Đếm ngược</button>
+						<button id="syncdatabutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="syncData()" data-i18n="sync_data_btn">Đồng bộ dữ liệu</button>
+						<button id="clearscreenbutton" type="button" class="secondary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="clearScreen()" data-i18n="clear_screen_btn">Xóa màn hình</button>
 					</div>
-					<div class="flex-group right debug">
-						<input type="text" id="cmdTXT" value="">
-						<button id="sendcmdbutton" type="button" class="primary" onclick="sendcmd()" data-i18n="send_cmd_btn">Gửi Lệnh</button>
+					<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto right debug">
+						<input type="text" id="cmdTXT" class="w-full sm:w-48 p-2 rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" value="">
+						<button id="sendcmdbutton" type="button" class="primary py-2 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="sendcmd()" data-i18n="send_cmd_btn">Gửi Lệnh</button>
 					</div>
 				</div>
 			</div>
@@ -101,33 +113,33 @@
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div class="note-container">
-					<!-- Left Panel: Preview -->
-					<div class="note-left-panel">
-						<div class="note-preview-wrapper">
-							<div class="note-preview-label">📺 Xem trước màn hình EPD (400×300)</div>
-							<div class="note-preview-frame">
+				<div class="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+					<!-- Left Panel: Preview (Sticky on Mobile) -->
+					<div class="sticky top-0 z-30 w-full bg-surface/95 backdrop-blur-md p-3 border-b border-border-custom/30 shadow-sm lg:static lg:bg-transparent lg:backdrop-blur-none lg:p-0 lg:border-0 lg:shadow-none flex flex-col items-center w-full lg:w-[410px] shrink-0">
+						<div class="flex flex-col items-center gap-1.5 w-full">
+							<div class="text-xs font-semibold text-text-sub tracking-wider" data-i18n="note_preview_title">📺 Xem trước màn hình EPD (400×300)</div>
+							<div class="border-2 border-border-custom rounded-xl overflow-hidden shadow-md bg-white p-1.5 max-w-full">
 								<!-- Hidden source canvases -->
 								<canvas id="epd-preview-canvas" width="136" height="300" style="display: none;"></canvas>
 								<canvas id="epd-note-canvas" width="264" height="300" style="display: none;"></canvas>
 								<!-- Main composite preview canvas -->
-								<canvas id="epd-note-composite-preview" width="400" height="300" style="border: 1px solid var(--canvas-border); border-radius: 4px; box-shadow: var(--shadow);"></canvas>
+								<canvas id="epd-note-composite-preview" width="400" height="300" class="max-w-full h-auto block rounded border border-border-custom/50 shadow-inner"></canvas>
 							</div>
 						</div>
 					</div>
 
 					<!-- Right Panel: Note & Event Editor -->
-					<div class="note-right-panel">
+					<div class="flex-1 w-full min-w-0">
 						<!-- Note Settings -->
-						<div class="note-section-title">✍️ Cấu hình Ghi chú (Nửa bên phải)</div>
-						<div class="note-form-grid">
-							<div class="note-form-group full-width">
-								<label for="epd-note-input">Nội dung ghi chú:</label>
-								<textarea id="epd-note-input" rows="4" placeholder="Nhập ghi chú..."></textarea>
+						<div class="text-base font-semibold mb-3 pb-1.5 border-b border-border-custom text-accent">✍️ Cấu hình Ghi chú (Nửa bên phải)</div>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+							<div class="sm:col-span-2 flex flex-col gap-1">
+								<label for="epd-note-input" class="text-xs font-medium text-text-main">Nội dung ghi chú:</label>
+								<textarea id="epd-note-input" rows="4" placeholder="Nhập ghi chú..." class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all resize-none"></textarea>
 							</div>
-							<div class="note-form-group">
-								<label for="epd-note-font">Font chữ:</label>
-								<select id="epd-note-font" onchange="onNoteControlChange()">
+							<div class="flex flex-col gap-1">
+								<label for="epd-note-font" class="text-xs font-medium text-text-main">Font chữ:</label>
+								<select id="epd-note-font" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" onchange="onNoteControlChange()">
 									<option value="Arial">Arial</option>
 									<option value="Georgia">Georgia</option>
 									<option value="Times New Roman">Times New Roman</option>
@@ -136,69 +148,69 @@
 									<option value="Tahoma">Tahoma</option>
 								</select>
 							</div>
-							<div class="note-form-group">
-								<label for="epd-note-size">Cỡ chữ (px):</label>
-								<input type="number" id="epd-note-size" value="13" min="8" max="30" onchange="onNoteControlChange()">
+							<div class="flex flex-col gap-1">
+								<label for="epd-note-size" class="text-xs font-medium text-text-main">Cỡ chữ (px):</label>
+								<input type="number" id="epd-note-size" value="13" min="8" max="30" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" onchange="onNoteControlChange()">
 							</div>
-							<div class="note-form-group">
-								<label for="epd-note-spacing">Dòng kẻ (px): <span id="epd-note-spacing-val">22px</span></label>
-								<input type="range" id="epd-note-spacing" min="15" max="40" value="22" oninput="document.getElementById('epd-note-spacing-val').innerText = this.value + 'px'; onNoteControlChange()">
+							<div class="flex flex-col gap-1">
+								<label for="epd-note-spacing" class="text-xs font-medium text-text-main">Dòng kẻ (px): <span id="epd-note-spacing-val" class="font-semibold text-accent">22px</span></label>
+								<input type="range" id="epd-note-spacing" min="15" max="40" value="22" class="cursor-pointer h-2 bg-surface rounded-lg appearance-none border border-border-custom" oninput="document.getElementById('epd-note-spacing-val').innerText = this.value + 'px'; onNoteControlChange()">
 							</div>
-							<div class="note-form-group">
-								<label for="epd-note-color">Màu chữ:</label>
-								<select id="epd-note-color" onchange="onNoteControlChange()">
+							<div class="flex flex-col gap-1">
+								<label for="epd-note-color" class="text-xs font-medium text-text-main">Màu chữ:</label>
+								<select id="epd-note-color" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all" onchange="onNoteControlChange()">
 									<option value="#000000">⚫ Đen</option>
 									<option value="#cc0000">🔴 Đỏ</option>
 								</select>
 							</div>
-							<div class="note-form-group full-width align-controls">
-								<label style="margin-bottom: 4px;">Căn lề:</label>
-								<div class="epd-note-align-group">
-									<button type="button" class="epd-note-align-btn" data-align="left">Trái</button>
-									<button type="button" class="epd-note-align-btn" data-align="center">Giữa</button>
-									<button type="button" class="epd-note-align-btn" data-align="right">Phải</button>
-									<button type="button" class="epd-note-align-btn" data-align="justify">Căn đều</button>
+							<div class="sm:col-span-2 flex flex-col gap-1.5">
+								<label class="text-xs font-medium text-text-main">Căn lề:</label>
+								<div class="flex gap-1">
+									<button type="button" class="epd-note-align-btn flex-1 py-2 px-3 text-xs border border-border-custom bg-surface text-text-main rounded-md cursor-pointer transition-all hover:bg-surface-hover" data-align="left">Trái</button>
+									<button type="button" class="epd-note-align-btn flex-1 py-2 px-3 text-xs border border-border-custom bg-surface text-text-main rounded-md cursor-pointer transition-all hover:bg-surface-hover" data-align="center">Giữa</button>
+									<button type="button" class="epd-note-align-btn flex-1 py-2 px-3 text-xs border border-border-custom bg-surface text-text-main rounded-md cursor-pointer transition-all hover:bg-surface-hover" data-align="right">Phải</button>
+									<button type="button" class="epd-note-align-btn flex-1 py-2 px-3 text-xs border border-border-custom bg-surface text-text-main rounded-md cursor-pointer transition-all hover:bg-surface-hover" data-align="justify">Căn đều</button>
 								</div>
 							</div>
-							<div class="note-form-group full-width style-checkboxes">
-								<label class="checkbox-inline">
-									<input type="checkbox" id="epd-note-bold" onchange="onNoteControlChange()"> <b>Đậm (B)</b>
+							<div class="sm:col-span-2 flex flex-wrap gap-4 mt-1">
+								<label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-main">
+									<input type="checkbox" id="epd-note-bold" class="rounded border-border-custom text-accent focus:ring-accent/15" onchange="onNoteControlChange()"> <b>Đậm (B)</b>
 								</label>
-								<label class="checkbox-inline">
-									<input type="checkbox" id="epd-note-italic" onchange="onNoteControlChange()"> <i>Nghiêng (I)</i>
+								<label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-main">
+									<input type="checkbox" id="epd-note-italic" class="rounded border-border-custom text-accent focus:ring-accent/15" onchange="onNoteControlChange()"> <i>Nghiêng (I)</i>
 								</label>
-								<label class="checkbox-inline">
-									<input type="checkbox" id="epd-note-wrap" checked onchange="onNoteControlChange()"> Tự động xuống dòng
+								<label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-main">
+									<input type="checkbox" id="epd-note-wrap" checked class="rounded border-border-custom text-accent focus:ring-accent/15" onchange="onNoteControlChange()"> Tự động xuống dòng
 								</label>
 							</div>
 						</div>
 
-						<hr class="note-divider">
+						<hr class="my-4 border-t border-border-custom/50">
 
 						<!-- Event Countdown Settings -->
-						<div class="note-section-title">⏰ Sự kiện đếm ngược (Nửa bên trái)</div>
-						<div class="note-form-grid">
-							<div class="note-form-group">
-								<label for="epd-event-name">Tên sự kiện:</label>
-								<input type="text" id="epd-event-name" maxlength="30" placeholder="Ví dụ: Tết Nguyên Đán">
+						<div class="text-base font-semibold mb-3 pb-1.5 border-b border-border-custom text-accent">⏰ Sự kiện đếm ngược (Nửa bên trái)</div>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+							<div class="flex flex-col gap-1">
+								<label for="epd-event-name" class="text-xs font-medium text-text-main">Tên sự kiện:</label>
+								<input type="text" id="epd-event-name" maxlength="30" placeholder="Ví dụ: Tết Nguyên Đán" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all">
 							</div>
-							<div class="note-form-group">
-								<label for="epd-event-dt">Thời gian sự kiện:</label>
-								<input type="datetime-local" id="epd-event-dt">
+							<div class="flex flex-col gap-1">
+								<label for="epd-event-dt" class="text-xs font-medium text-text-main">Thời gian sự kiện:</label>
+								<input type="datetime-local" id="epd-event-dt" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none transition-all">
 							</div>
 						</div>
 
-						<div class="flex-container" style="justify-content: center; margin-top: 15px; gap: 8px;">
-							<button type="button" class="secondary" onclick="clearNoteEvent()">Xóa sự kiện</button>
-							<button type="button" class="primary" onclick="saveNoteEvent()">Đồng bộ sự kiện</button>
+						<div class="flex flex-col sm:flex-row justify-center gap-2 mb-4">
+							<button type="button" class="secondary w-full sm:w-auto py-2.5 px-5 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="clearNoteEvent()">Xóa sự kiện</button>
+							<button type="button" class="primary w-full sm:w-auto py-2.5 px-5 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="saveNoteEvent()">Đồng bộ sự kiện</button>
 						</div>
 
-						<hr class="note-divider">
+						<hr class="my-4 border-t border-border-custom/50">
 
 						<!-- Note Actions -->
-						<div class="flex-container" style="justify-content: center; margin-top: 15px; gap: 8px;">
-							<button type="button" class="secondary" onclick="loadNoteToMainCanvas()">Tải lên bảng vẽ chính</button>
-							<button type="button" class="primary" onclick="sendNoteImage()">📤 Gửi Ghi chú lên đồng hồ</button>
+						<div class="flex flex-col sm:flex-row justify-center gap-2">
+							<button type="button" class="secondary w-full sm:w-auto py-2.5 px-5 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="loadNoteToMainCanvas()">Tải lên bảng vẽ chính</button>
+							<button type="button" class="primary w-full sm:w-auto py-2.5 px-5 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="sendNoteImage()">📤 Gửi Ghi chú lên đồng hồ</button>
 						</div>
 					</div>
 				</div>
@@ -211,25 +223,25 @@
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div class="tt-container">
-					<!-- Left Panel: Preview -->
-					<div class="tt-left-panel">
-						<div class="tt-preview-wrapper">
-							<div class="tt-preview-label">📺 Xem trước màn hình EPD (400×300)</div>
-							<div class="tt-preview-frame">
-								<canvas id="tt-epd-preview" width="400" height="300"></canvas>
+				<div class="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+					<!-- Left Panel: Preview (Sticky on Mobile) -->
+					<div class="sticky top-0 z-30 w-full bg-surface/95 backdrop-blur-md p-3 border-b border-border-custom/30 shadow-sm lg:static lg:bg-transparent lg:backdrop-blur-none lg:p-0 lg:border-0 lg:shadow-none flex flex-col items-center w-full lg:w-[410px] shrink-0">
+						<div class="flex flex-col items-center gap-1.5 w-full">
+							<div class="text-xs font-semibold text-text-sub tracking-wider" data-i18n="timetable_preview_title">📺 Xem trước màn hình EPD (400×300)</div>
+							<div class="border-2 border-border-custom rounded-xl overflow-hidden shadow-md bg-white p-1.5 max-w-full">
+								<canvas id="tt-epd-preview" width="400" height="300" class="max-w-full h-auto block rounded border border-border-custom/50 shadow-inner"></canvas>
 							</div>
 						</div>
 					</div>
 
 					<!-- Right Panel: Spreadsheet Editor -->
-					<div class="tt-right-panel">
+					<div class="flex-1 w-full min-w-0">
 						<!-- Toolbar -->
-						<div class="tt-toolbar-bar">
+						<div class="flex flex-wrap items-center gap-3 p-3 bg-surface border border-border-custom rounded-xl shadow-sm mb-4 w-full">
 							<!-- Font Group -->
-							<div class="tt-tb-group">
-								<span class="tt-tb-label">Font</span>
-								<select id="tt-tb-font" onchange="window.ttApplyToolbar()">
+							<div class="flex items-center gap-1.5 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+								<span class="text-xs font-semibold text-text-sub">Font</span>
+								<select id="tt-tb-font" class="p-1 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="window.ttApplyToolbar()">
 									<option value="Arial">Arial</option>
 									<option value="Georgia">Georgia</option>
 									<option value="Times New Roman">Times New Roman</option>
@@ -239,58 +251,57 @@
 								</select>
 							</div>
 							<!-- Size Group -->
-							<div class="tt-tb-group">
-								<span class="tt-tb-label">Cỡ</span>
-								<input type="number" id="tt-tb-size" value="13" min="7" max="36" style="width: 55px;" onchange="window.ttApplyToolbar()">
+							<div class="flex items-center gap-1.5 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+								<span class="text-xs font-semibold text-text-sub">Cỡ</span>
+								<input type="number" id="tt-tb-size" value="13" min="7" max="36" class="p-1 w-12 text-xs rounded bg-surface border border-border-custom text-text-main text-center focus:border-accent outline-none" onchange="window.ttApplyToolbar()">
 							</div>
 							<!-- Color Group -->
-							<div class="tt-tb-group">
-								<span class="tt-tb-label">Màu</span>
-								<select id="tt-tb-color" onchange="window.ttApplyToolbar()">
+							<div class="flex items-center gap-1.5 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+								<span class="text-xs font-semibold text-text-sub">Màu</span>
+								<select id="tt-tb-color" class="p-1 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="window.ttApplyToolbar()">
 									<option value="#000000">⚫ Đen</option>
 									<option value="#cc0000">🔴 Đỏ</option>
 								</select>
 							</div>
 							<!-- Style Controls -->
-							<div class="tt-tb-group">
-								<button id="tt-tb-bold" class="tt-style-btn" onclick="window.ttToggleBold()" title="Đậm (Bold)"><b>B</b></button>
-								<button id="tt-tb-italic" class="tt-style-btn" onclick="window.ttToggleItalic()" title="Nghiêng (Italic)"><i>I</i></button>
+							<div class="flex items-center gap-1 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+								<button id="tt-tb-bold" class="tt-style-btn p-1 px-2.5 text-xs rounded border border-border-custom bg-surface text-text-main hover:bg-surface-hover transition cursor-pointer" onclick="window.ttToggleBold()" title="Đậm (Bold)"><b>B</b></button>
+								<button id="tt-tb-italic" class="tt-style-btn p-1 px-2.5 text-xs rounded border border-border-custom bg-surface text-text-main hover:bg-surface-hover transition cursor-pointer" onclick="window.ttToggleItalic()" title="Nghiêng (Italic)"><i>I</i></button>
 							</div>
 							<!-- Align Controls -->
-							<div class="tt-tb-group">
-								<span class="tt-tb-label">Căn</span>
-								<select id="tt-tb-align" onchange="window.ttApplyToolbar()">
+							<div class="flex items-center gap-1.5 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+								<span class="text-xs font-semibold text-text-sub">Căn</span>
+								<select id="tt-tb-align" class="p-1 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="window.ttApplyToolbar()">
 									<option value="left">← Trái</option>
 									<option value="center" selected>↔ Giữa</option>
 									<option value="right">→ Phải</option>
 								</select>
 							</div>
 							<!-- Size Controls Block -->
-							<div class="tt-size-sliders-block" style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; border-top: 1px dashed var(--border-color, #e0e0e0); padding-top: 8px;">
-								<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
-									<span class="tt-tb-label" style="width: 40px;">Cao</span>
-									<input type="range" id="tt-tb-height-slider" min="10" max="300" value="30" style="flex-grow: 1; max-width: 250px; cursor: pointer;" oninput="document.getElementById('tt-tb-height').value = this.value; window.ttApplySize()">
-									<input type="number" id="tt-tb-height" title="Chiều cao hàng (px)" min="10" max="300" style="width: 50px; padding: 2px;" onchange="document.getElementById('tt-tb-height-slider').value = this.value; window.ttApplySize()">
-									<span style="font-size: 0.8em; color: var(--text-secondary, #5f6368);">(Hàng được chọn)</span>
+							<div class="w-full flex flex-col md:flex-row gap-3 mt-2 border-t border-dashed border-border-custom/50 pt-3">
+								<div class="flex-1 flex items-center gap-2 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+									<span class="text-xs font-semibold text-text-sub w-10">Cao</span>
+									<input type="range" id="tt-tb-height-slider" min="15" max="300" value="30" class="flex-grow cursor-pointer h-1.5 bg-surface rounded-lg appearance-none border border-border-custom" oninput="document.getElementById('tt-tb-height').value = this.value; window.ttApplySize()">
+									<input type="number" id="tt-tb-height" title="Chiều cao hàng (px)" min="15" max="300" class="p-1 w-12 text-xs rounded bg-surface border border-border-custom text-text-main text-center focus:border-accent outline-none" onchange="document.getElementById('tt-tb-height-slider').value = this.value; window.ttApplySize()">
 								</div>
-								<div class="tt-tb-group" style="display: flex; align-items: center; gap: 4px;">
-									<span class="tt-tb-label" style="width: 40px;">Rộng</span>
-									<input type="range" id="tt-tb-width-slider" min="10" max="400" value="40" style="flex-grow: 1; max-width: 250px; cursor: pointer;" oninput="document.getElementById('tt-tb-width').value = this.value; window.ttApplySize()">
-									<input type="number" id="tt-tb-width" title="Độ rộng cột (px)" min="10" max="400" style="width: 50px; padding: 2px;" onchange="document.getElementById('tt-tb-width-slider').value = this.value; window.ttApplySize()">
-									<span style="font-size: 0.8em; color: var(--text-secondary, #5f6368);">(Cột được chọn)</span>
+								<div class="flex-1 flex items-center gap-2 bg-surface-hover/50 p-1.5 rounded-lg border border-border-custom/50">
+									<span class="text-xs font-semibold text-text-sub w-10">Rộng</span>
+									<input type="range" id="tt-tb-width-slider" min="20" max="400" value="40" class="flex-grow cursor-pointer h-1.5 bg-surface rounded-lg appearance-none border border-border-custom" oninput="document.getElementById('tt-tb-width').value = this.value; window.ttApplySize()">
+									<input type="number" id="tt-tb-width" title="Độ rộng cột (px)" min="20" max="400" class="p-1 w-12 text-xs rounded bg-surface border border-border-custom text-text-main text-center focus:border-accent outline-none" onchange="document.getElementById('tt-tb-width-slider').value = this.value; window.ttApplySize()">
 								</div>
 							</div>
 							<!-- Structure Control -->
-							<div class="tt-tb-group tt-tb-actions" style="margin-left: auto; display: flex; gap: 4px;">
-								<button type="button" class="secondary btn-sm" onclick="window.ttInsertRowSel()" title="Chèn hàng bên dưới">＋ Hàng</button>
-								<button type="button" class="secondary btn-sm" onclick="window.ttDeleteRowSel()" title="Xóa hàng đang chọn">✕ Hàng</button>
-								<button type="button" class="secondary btn-sm" onclick="window.ttInsertColSel()" title="Chèn cột bên phải">＋ Cột</button>
-								<button type="button" class="secondary btn-sm" onclick="window.ttDeleteColSel()" title="Xóa cột đang chọn">✕ Cột</button>
+							<div class="flex flex-wrap gap-1.5 mt-2 md:mt-0 md:ml-auto">
+								<button type="button" class="secondary py-1.5 px-3 text-xs font-semibold rounded-md border border-border-custom cursor-pointer hover:bg-surface-hover transition" onclick="window.ttInsertRowSel()" title="Chèn hàng bên dưới">＋ Hàng</button>
+								<button type="button" class="secondary py-1.5 px-3 text-xs font-semibold rounded-md border border-border-custom cursor-pointer hover:bg-surface-hover transition" onclick="window.ttDeleteRowSel()" title="Xóa hàng đang chọn">✕ Hàng</button>
+								<button type="button" class="secondary py-1.5 px-3 text-xs font-semibold rounded-md border border-border-custom cursor-pointer hover:bg-surface-hover transition" onclick="window.ttInsertColSel()" title="Chèn cột bên phải">＋ Cột</button>
+								<button type="button" class="secondary py-1.5 px-3 text-xs font-semibold rounded-md border border-border-custom cursor-pointer hover:bg-surface-hover transition" onclick="window.ttDeleteColSel()" title="Xóa cột đang chọn">✕ Cột</button>
+								<button type="button" class="secondary py-1.5 px-3 text-xs font-semibold rounded-md border border-border-custom cursor-pointer hover:bg-surface-hover text-accent transition" onclick="window.ttResetSizes()" title="Chia đều kích thước các hàng và cột">Đặt lại</button>
 							</div>
 						</div>
 
 						<!-- Sheet scrollable table area -->
-						<div class="tt-sheet-scroll">
+						<div class="tt-sheet-scroll w-full overflow-auto max-h-[450px] border border-border-custom rounded-xl shadow-inner bg-white">
 							<div id="tt-sheet-wrapper"></div>
 						</div>
 
@@ -298,8 +309,8 @@
 						<canvas id="tt-table-canvas" style="display:none;"></canvas>
 
 						<!-- Actions -->
-						<div class="flex-container" style="justify-content: center; margin-top: 15px;">
-							<button id="sendtimetablebutton" type="button" class="primary" onclick="window.sendTimetableImage()" style="width: 100%; max-width: 320px; font-weight: bold; padding: 10px 20px;">
+						<div class="flex justify-center mt-4">
+							<button id="sendtimetablebutton" type="button" class="primary w-full sm:max-w-xs py-3 px-6 rounded-xl font-bold cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg" onclick="window.sendTimetableImage()">
 								📤 Gửi Thời Khóa Biểu lên đồng hồ
 							</button>
 						</div>
@@ -318,13 +329,13 @@
 					Thiết lập tối đa 4 khung giờ trong ngày cho **từng ngày trong tuần** để <strong>DỪNG cập nhật màn hình</strong> (tiết kiệm pin). Đồng hồ sẽ tự động bỏ qua các lượt cập nhật khi thời gian hiện tại nằm trong các khoảng này.
 				</p>
 				
-				<div class="sleep-schedule-container">
+				<div class="flex flex-col gap-2.5">
 					<!-- Thứ Hai -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Hai</div>
-						<div class="sleep-day-slots" id="sleep-shelf-0"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Hai</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-0"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-0" onchange="toggleSleepOverride(0)">
 								<span class="switch-slider"></span>
@@ -333,11 +344,11 @@
 					</div>
 
 					<!-- Thứ Ba -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Ba</div>
-						<div class="sleep-day-slots" id="sleep-shelf-1"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Ba</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-1"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-1" onchange="toggleSleepOverride(1)">
 								<span class="switch-slider"></span>
@@ -346,11 +357,11 @@
 					</div>
 
 					<!-- Thứ Tư -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Tư</div>
-						<div class="sleep-day-slots" id="sleep-shelf-2"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Tư</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-2"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-2" onchange="toggleSleepOverride(2)">
 								<span class="switch-slider"></span>
@@ -359,11 +370,11 @@
 					</div>
 
 					<!-- Thứ Năm -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Năm</div>
-						<div class="sleep-day-slots" id="sleep-shelf-3"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Năm</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-3"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-3" onchange="toggleSleepOverride(3)">
 								<span class="switch-slider"></span>
@@ -372,11 +383,11 @@
 					</div>
 
 					<!-- Thứ Sáu -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Sáu</div>
-						<div class="sleep-day-slots" id="sleep-shelf-4"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Sáu</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-4"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-4" onchange="toggleSleepOverride(4)">
 								<span class="switch-slider"></span>
@@ -385,11 +396,11 @@
 					</div>
 
 					<!-- Thứ Bảy -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Thứ Bảy</div>
-						<div class="sleep-day-slots" id="sleep-shelf-5"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Thứ Bảy</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-5"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-5" onchange="toggleSleepOverride(5)">
 								<span class="switch-slider"></span>
@@ -398,11 +409,11 @@
 					</div>
 
 					<!-- Chủ Nhật -->
-					<div class="sleep-day-row">
-						<div class="sleep-day-name">Chủ Nhật</div>
-						<div class="sleep-day-slots" id="sleep-shelf-6"></div>
-						<div class="sleep-day-toggle">
-							<span class="toggle-label">Bật T.Kiệm</span>
+					<div class="flex flex-col md:flex-row md:items-center justify-between p-3 bg-surface border border-border-custom rounded-xl gap-3">
+						<div class="font-semibold text-sm text-text-main md:w-24 shrink-0">Chủ Nhật</div>
+						<div class="flex-grow flex flex-wrap gap-1.5 min-h-[36px] items-center" id="sleep-shelf-6"></div>
+						<div class="flex items-center justify-between md:justify-end gap-3 border-t md:border-t-0 border-border-custom/30 pt-2 md:pt-0 shrink-0 w-full md:w-auto">
+							<span class="text-xs text-text-sub font-semibold">Bật T.Kiệm</span>
 							<label class="switch">
 								<input type="checkbox" id="sleep-override-btn-6" onchange="toggleSleepOverride(6)">
 								<span class="switch-slider"></span>
@@ -410,8 +421,8 @@
 						</div>
 					</div>
 				</div>
-				<div class="flex-container" style="justify-content: center; margin-top: 15px;">
-					<button id="sendsleepbutton" type="button" class="primary" onclick="sendSleepSchedule()">Gửi cấu hình Lịch tắt (Tất cả các ngày)</button>
+				<div class="flex justify-center mt-4">
+					<button id="sendsleepbutton" type="button" class="primary w-full sm:max-w-xs py-3 px-6 rounded-xl font-bold cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg" onclick="sendSleepSchedule()">Gửi cấu hình Lịch tắt (Tất cả các ngày)</button>
 				</div>
 			</div>
 		</fieldset>
@@ -446,13 +457,13 @@
 				<span class="collapse-icon">▼</span>
 			</legend>
 			<div class="fieldset-content">
-				<div class="flex-container">
-					<input type="file" id="imageFile" accept=".png,.jpg,.bmp,.webp,.jpeg" onchange="updateImage()">
+				<div class="mb-4">
+					<input type="file" id="imageFile" accept=".png,.jpg,.bmp,.webp,.jpeg" class="block w-full text-sm text-text-sub file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-surface-hover file:text-text-main hover:file:bg-surface transition cursor-pointer" onchange="updateImage()">
 				</div>
-				<div class="flex-container options">
-					<div class="flex-group debug">
-						<label for="canvasSize" data-i18n="canvas_size">Kích thước:</label>
-						<select id="canvasSize" onchange="updateCanvasSize()">
+				<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+					<div class="flex flex-col gap-1.5 debug">
+						<label for="canvasSize" class="text-xs font-semibold text-text-sub" data-i18n="canvas_size">Kích thước:</label>
+						<select id="canvasSize" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="updateCanvasSize()">
 							<option value="1.54_152_152">1.54 (152x152)</option>
 							<option value="1.54_200_200">1.54 (200x200)</option>
 							<option value="2.13_104_212">2.13 (104x212)</option>
@@ -481,18 +492,18 @@
 							<option value="7.3E6_800_480">7.3E6 (800x480)</option>
 						</select>
 					</div>
-					<div class="flex-group debug">
-						<label for="ditherMode" data-i18n="color_mode">Chế độ màu:</label>
-						<select id="ditherMode" onchange="applyDither()">
+					<div class="flex flex-col gap-1.5 debug">
+						<label for="ditherMode" class="text-xs font-semibold text-text-sub" data-i18n="color_mode">Chế độ màu:</label>
+						<select id="ditherMode" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="applyDither()">
 							<option value="threeColor" selected>B/W/R (3-Color)</option>
 							<option value="blackWhiteColor">B/W (2-Color)</option>
 							<option value="fourColor">B/W/R/Y (4-Color)</option>
 							<option value="sixColor">6-Color</option>
 						</select>
 					</div>
-					<div class="flex-group">
-						<label for="ditherAlg" data-i18n="dither_alg">Kiểu Dither:</label>
-						<select id="ditherAlg" onchange="applyDither()">
+					<div class="flex flex-col gap-1.5">
+						<label for="ditherAlg" class="text-xs font-semibold text-text-sub" data-i18n="dither_alg">Kiểu Dither:</label>
+						<select id="ditherAlg" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer" onchange="applyDither()">
 							<option value="floydSteinberg">Floyd-Steinberg</option>
 							<option value="atkinson">Atkinson</option>
 							<option value="bayer">Bayer</option>
@@ -501,94 +512,125 @@
 							<option value="none">None (No Dithering)</option>
 						</select>
 					</div>
-					<div class="flex-group">
-						<label for="ditherStrength" data-i18n="dither_strength">Độ Dither:</label>
-						<input type="range" min="0" max="5" step="0.1" value="1.0" id="ditherStrength">
-						<label id="ditherStrengthValue">1.0</label>
+					<div class="flex flex-col gap-1.5">
+						<div class="flex justify-between items-center text-xs font-semibold text-text-sub">
+							<span data-i18n="dither_strength">Độ Dither:</span>
+							<label id="ditherStrengthValue" class="text-accent font-bold">1.0</label>
+						</div>
+						<input type="range" min="0" max="5" step="0.1" value="1.0" id="ditherStrength" class="cursor-pointer h-2 bg-surface rounded-lg appearance-none border border-border-custom">
 					</div>
-					<div class="flex-group">
-						<label for="ditherContrast" data-i18n="contrast">Độ tương phản:</label>
-						<input type="range" min="0.5" max="2" step="0.1" value="1.2" id="ditherContrast">
-						<label id="ditherContrastValue">1.2</label>
+					<div class="flex flex-col gap-1.5">
+						<div class="flex justify-between items-center text-xs font-semibold text-text-sub">
+							<span data-i18n="contrast">Độ tương phản:</span>
+							<label id="ditherContrastValue" class="text-accent font-bold">1.2</label>
+						</div>
+						<input type="range" min="0.5" max="2" step="0.1" value="1.2" id="ditherContrast" class="cursor-pointer h-2 bg-surface rounded-lg appearance-none border border-border-custom">
 					</div>
 				</div>
-				<div class="flex-container options">
-					<div class="flex-group debug">
-						<label for="mtusize">MTU:</label>
-						<input type="number" id="mtusize" value="20" min="0" max="255">
-						<label for="interleavedcount" data-i18n="confirm_interval">K.hoảng ACK:</label>
-						<input type="number" id="interleavedcount" value="3" min="0" max="500">
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 debug">
+					<div class="flex flex-col gap-1.5">
+						<label for="mtusize" class="text-xs font-semibold text-text-sub">MTU:</label>
+						<input type="number" id="mtusize" value="20" min="0" max="255" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none">
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<label for="interleavedcount" class="text-xs font-semibold text-text-sub" data-i18n="confirm_interval">K.hoảng ACK:</label>
+						<input type="number" id="interleavedcount" value="3" min="0" max="500" class="p-2.5 rounded-lg bg-surface border border-border-custom text-text-main focus:border-accent outline-none">
 					</div>
 				</div>
-				<div class="status-bar">
-					<b data-i18n="status">Trạng thái: </b><span id="status"></span>
-					<progress id="transfer-progress" value="0" max="100" style="display: none;"></progress>
+				<div class="p-3.5 bg-surface-hover/30 border border-border-custom/50 rounded-xl mb-4 text-sm text-text-main flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+					<div>
+						<b data-i18n="status">Trạng thái: </b><span id="status" class="font-medium"></span>
+					</div>
+					<progress id="transfer-progress" value="0" max="100" class="w-full sm:w-48 h-3 rounded-lg overflow-hidden bg-surface border border-border-custom [&::-webkit-progress-bar]:bg-surface [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent" style="display: none;"></progress>
 				</div>
-				<div class="flex-container">
-					<div class="flex-group">
-						<button type="button" class="secondary debug" onclick="rotateCanvas()" data-i18n="rotate_canvas_btn">Xoay Ảnh</button>
-						<button type="button" class="secondary" onclick="clearCanvas()" data-i18n="clear_canvas_btn">Xóa Ảnh</button>
-						<button type="button" class="secondary debug" onclick="downloadDataArray()" data-i18n="download_array_btn">Tải mảng C</button>
-						<button id="sendimgbutton" type="button" class="primary" onclick="sendimg()" data-i18n="send_img_btn">Gửi Ảnh</button>
-					</div>
+				<div class="flex flex-wrap justify-center sm:justify-start gap-2 mb-4">
+					<button type="button" class="secondary py-2.5 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200 debug" onclick="rotateCanvas()" data-i18n="rotate_canvas_btn">Xoay Ảnh</button>
+					<button type="button" class="secondary py-2.5 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200" onclick="clearCanvas()" data-i18n="clear_canvas_btn">Xóa Ảnh</button>
+					<button type="button" class="secondary py-2.5 px-4 rounded-lg font-semibold cursor-pointer transition-all duration-200 debug" onclick="downloadDataArray()" data-i18n="download_array_btn">Tải mảng C</button>
+					<button id="sendimgbutton" type="button" class="primary py-2.5 px-6 rounded-lg font-semibold cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg sm:ml-auto w-full sm:w-auto" onclick="sendimg()" data-i18n="send_img_btn">Gửi Ảnh</button>
 				</div>
-				<div class="canvas-container">
-					<div class="canvas-title"></div>
-					<canvas id="canvas" width="400" height="300"></canvas>
-					<div class="flex-container canvas-tools">
-						<div class="flex-group tool-buttons">
-							<button id="brush-mode" title="Brush" class="tool-button">✏️</button>
-							<button id="eraser-mode" title="Eraser" class="tool-button">🧽</button>
-							<button id="text-mode" title="Add Text" class="tool-button">T</button>
-							<button id="undo-btn" title="Undo (Ctrl+Z)" class="tool-button hide">↶</button>
-							<button id="redo-btn" title="Redo (Ctrl+Y)" class="tool-button hide">↷</button>
+				<div class="canvas-container flex flex-col items-center gap-4 mt-6 w-full">
+					<div class="canvas-title text-accent font-semibold"></div>
+					<div class="sticky top-0 z-30 w-full bg-surface/95 backdrop-blur-md p-3 border-b border-border-custom/30 shadow-sm lg:static lg:bg-transparent lg:backdrop-blur-none lg:p-0 lg:border-0 lg:shadow-none flex flex-col items-center w-full">
+						<div class="border-2 border-border-custom rounded-xl overflow-hidden shadow-md bg-white p-1.5 max-w-full">
+							<canvas id="canvas" width="400" height="300" class="max-w-full h-auto block rounded border border-border-custom/50 shadow-inner"></canvas>
 						</div>
 					</div>
-					<div class="flex-container canvas-tools">
-						<div class="flex-group brush-tools">
-							<label for="brush-color" data-i18n="brush_color">Màu cọ:</label>
-							<select id="brush-color">
-								<option value="#000000">Black</option>
-								<option value="#FF0000">Red</option>
-								<option value="#FFFF00">Yellow</option>
-								<option value="#00FF00">Green</option>
-								<option value="#0000FF">Blue</option>
-								<option value="#FFFFFF">White</option>
-							</select>
-							<label for="brush-size" data-i18n="brush_size">Cỡ cọ:</label>
-							<input type="number" id="brush-size" value="2" min="1" max="100">
+					
+					<!-- Drawing toolbar -->
+					<div class="flex flex-col gap-3 w-full max-w-[400px]">
+						<!-- Tool selection -->
+						<div class="flex justify-center gap-1.5 p-1.5 bg-surface border border-border-custom rounded-xl shadow-sm w-full">
+							<button id="brush-mode" title="Brush" class="tool-button flex-1 py-2 px-3 text-center border border-border-custom/50 bg-surface rounded-lg cursor-pointer hover:bg-surface-hover transition">✏️</button>
+							<button id="eraser-mode" title="Eraser" class="tool-button flex-1 py-2 px-3 text-center border border-border-custom/50 bg-surface rounded-lg cursor-pointer hover:bg-surface-hover transition">🧽</button>
+							<button id="text-mode" title="Add Text" class="tool-button flex-1 py-2 px-3 text-center border border-border-custom/50 bg-surface rounded-lg cursor-pointer hover:bg-surface-hover transition">T</button>
+							<button id="undo-btn" title="Undo (Ctrl+Z)" class="tool-button hide flex-1 py-2 px-3 text-center border border-border-custom/50 bg-surface rounded-lg cursor-pointer hover:bg-surface-hover transition">↶</button>
+							<button id="redo-btn" title="Redo (Ctrl+Y)" class="tool-button hide flex-1 py-2 px-3 text-center border border-border-custom/50 bg-surface rounded-lg cursor-pointer hover:bg-surface-hover transition">↷</button>
 						</div>
-					</div>
-					<div class="flex-container canvas-tools">
-						<div class="flex-group text-tools">
-							<label for="font-family" data-i18n="font_family">Font chữ:</label>
-							<select id="font-family">
-								<option value="Arial">Arial</option>
-								<option value="sans-serif">Sans-serif</option>
-								<option value="monospace">Monospace</option>
-								<option value="Times New Roman">Times New Roman</option>
-								<option value="Courier New">Courier New</option>
-								<option value="Verdana">Verdana</option>
-								<option value="Tahoma">Tahoma</option>
-								<option value="Georgia">Georgia</option>
-							</select>
-							<label for="font-size" data-i18n="font_size">Cỡ chữ:</label>
-							<input type="number" id="font-size" value="16" min="1" max="100">
+
+						<!-- Brush Tools options -->
+						<div class="brush-tools flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-surface border border-border-custom rounded-xl shadow-sm w-full">
+							<div class="flex-grow flex items-center justify-between gap-2">
+								<label for="brush-color" class="text-xs font-semibold text-text-sub" data-i18n="brush_color">Màu cọ:</label>
+								<select id="brush-color" class="p-2 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer">
+									<option value="#000000">Black</option>
+									<option value="#FF0000">Red</option>
+									<option value="#FFFF00">Yellow</option>
+									<option value="#00FF00">Green</option>
+									<option value="#0000FF">Blue</option>
+									<option value="#FFFFFF">White</option>
+								</select>
+							</div>
+							<div class="flex-grow flex items-center justify-between gap-2">
+								<label for="brush-size" class="text-xs font-semibold text-text-sub" data-i18n="brush_size">Cỡ cọ:</label>
+								<input type="number" id="brush-size" value="2" min="1" max="100" class="p-2 w-16 text-xs text-center rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none">
+							</div>
 						</div>
-						<div class="flex-group text-tools">
-							<input type="text" id="text-input" placeholder="Nhập chữ" style="width:150px" data-i18n="text_input_placeholder">
-							<button id="text-bold" title="Bold">B</button>
-							<button id="text-italic" title="Italic">I</button>
-							<button id="add-text-btn" class="primary" data-i18n="add_text_btn">Thêm chữ</button>
+
+						<!-- Text Tools options -->
+						<div class="text-tools flex flex-col gap-3 p-3 bg-surface border border-border-custom rounded-xl shadow-sm w-full">
+							<div class="flex flex-col sm:flex-row gap-2">
+								<div class="flex-1 flex items-center justify-between gap-2">
+									<label for="font-family" class="text-xs font-semibold text-text-sub" data-i18n="font_family">Font:</label>
+									<select id="font-family" class="p-2 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none cursor-pointer">
+										<option value="Arial">Arial</option>
+										<option value="sans-serif">Sans-serif</option>
+										<option value="monospace">Monospace</option>
+										<option value="Times New Roman">Times New Roman</option>
+										<option value="Courier New">Courier New</option>
+										<option value="Verdana">Verdana</option>
+										<option value="Tahoma">Tahoma</option>
+										<option value="Georgia">Georgia</option>
+									</select>
+								</div>
+								<div class="flex-1 flex items-center justify-between gap-2">
+									<label for="font-size" class="text-xs font-semibold text-text-sub" data-i18n="font_size">Cỡ chữ:</label>
+									<input type="number" id="font-size" value="16" min="1" max="100" class="p-2 w-16 text-xs text-center rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none">
+								</div>
+							</div>
+							<div class="flex flex-col gap-2">
+								<input type="text" id="text-input" placeholder="Nhập chữ" class="w-full p-2.5 text-xs rounded bg-surface border border-border-custom text-text-main focus:border-accent outline-none" data-i18n="text_input_placeholder">
+								<div class="flex gap-2">
+									<button id="text-bold" title="Bold" class="flex-1 p-2 text-xs font-bold rounded border border-border-custom bg-surface text-text-main hover:bg-surface-hover">B</button>
+									<button id="text-italic" title="Italic" class="flex-1 p-2 text-xs italic rounded border border-border-custom bg-surface text-text-main hover:bg-surface-hover">I</button>
+									<button id="add-text-btn" class="primary flex-[2] py-2 px-4 text-xs font-semibold rounded-lg cursor-pointer transition" data-i18n="add_text_btn">Thêm chữ</button>
+								</div>
+							</div>
 						</div>
-						<div class="flex-group crop-tools">
-							<button id="crop-zoom-in" title="Zoom In" class="secondary">+</button>
-							<button id="crop-zoom-out" title="Zoom Out" class="secondary">-</button>
-							<button id="crop-move-left" title="Move Left">⇦</button>
-							<button id="crop-move-up" title="Move Up">⇧</button>
-							<button id="crop-move-down" title="Move Down">⇩</button>
-							<button id="crop-move-right" title="Move Right">⇨</button>
-							<button class="primary" onclick="applyDither()" data-i18n="finish_btn">Hoàn tất</button>
+
+						<!-- Crop Tools options -->
+						<div class="crop-tools flex flex-col gap-3 p-3 bg-surface border border-border-custom rounded-xl shadow-sm w-full">
+							<div class="flex justify-center gap-1.5">
+								<button id="crop-zoom-in" title="Zoom In" class="secondary flex-1 py-2 px-3 rounded-lg text-sm font-semibold cursor-pointer">+</button>
+								<button id="crop-zoom-out" title="Zoom Out" class="secondary flex-1 py-2 px-3 rounded-lg text-sm font-semibold cursor-pointer">-</button>
+							</div>
+							<div class="grid grid-cols-4 gap-1.5 justify-center">
+								<button id="crop-move-left" title="Move Left" class="p-2 rounded bg-surface border border-border-custom text-text-main hover:bg-surface-hover text-center">⇦</button>
+								<button id="crop-move-up" title="Move Up" class="p-2 rounded bg-surface border border-border-custom text-text-main hover:bg-surface-hover text-center">⇧</button>
+								<button id="crop-move-down" title="Move Down" class="p-2 rounded bg-surface border border-border-custom text-text-main hover:bg-surface-hover text-center">⇩</button>
+								<button id="crop-move-right" title="Move Right" class="p-2 rounded bg-surface border border-border-custom text-text-main hover:bg-surface-hover text-center">⇨</button>
+							</div>
+							<button class="primary py-2.5 px-4 rounded-lg font-semibold cursor-pointer transition w-full mt-2" onclick="applyDither()" data-i18n="finish_btn">Hoàn tất</button>
 						</div>
 					</div>
 				</div>

@@ -112,7 +112,7 @@
     for (let c = 0; c < cols; c++) {
       const th = document.createElement('th');
       th.className = 'tt-col-header';
-      th.style.minWidth = Math.max(40, colWidths[c]) + 'px';
+      th.style.minWidth = Math.max(20, colWidths[c]) + 'px';
       th.innerHTML = `<span>${String.fromCharCode(65 + c)}</span>`;
       hrow.appendChild(th);
     }
@@ -143,7 +143,7 @@
         td.style.textAlign  = cell.align;
         td.style.fontWeight = cell.bold   ? 'bold'   : 'normal';
         td.style.fontStyle  = cell.italic ? 'italic' : 'normal';
-        td.style.minWidth   = Math.max(40, colWidths[c]) + 'px';
+        td.style.minWidth   = Math.max(20, colWidths[c]) + 'px';
         td.style.height     = rowHeights[r] + 'px';
         td.contentEditable  = 'true';
         td.textContent      = cell.text;
@@ -228,62 +228,52 @@
     if (!selectedCell) return;
     const w = parseInt(document.getElementById('tt-tb-width')?.value);
     const h = parseInt(document.getElementById('tt-tb-height')?.value);
+    const MIN_CELL_W = 20;
+    const MIN_CELL_H = 15;
     
-    // Scale column widths to sum up to exactly FULL_W (400) without jumping the active column
-    if (!isNaN(w) && w >= 10 && w <= FULL_W) {
-      const maxW = FULL_W - (colWidths.length - 1) * 10;
-      const clampedW = Math.max(10, Math.min(w, maxW));
-      colWidths[selectedCell.c] = clampedW;
+    // Adjust column width
+    if (!isNaN(w) && colWidths.length > 1) {
+      const c = selectedCell.c;
+      const old_w = colWidths[c];
+      const target_c = (c < colWidths.length - 1) ? c + 1 : c - 1;
+      const max_allowable_w = colWidths[c] + colWidths[target_c] - MIN_CELL_W;
+      const clampedW = Math.max(MIN_CELL_W, Math.min(w, max_allowable_w));
+      const diff = clampedW - old_w;
       
-      const otherSumW = colWidths.reduce((sum, width, idx) => idx === selectedCell.c ? sum : sum + width, 0);
-      if (otherSumW > 0) {
-        const remainingW = FULL_W - clampedW;
-        const scaleX = remainingW / otherSumW;
-        colWidths = colWidths.map((width, idx) => {
-          if (idx === selectedCell.c) return clampedW;
-          return Math.floor(width * scaleX);
-        });
-        const newSumW = colWidths.reduce((a, b) => a + b, 0);
-        if (newSumW !== FULL_W && colWidths.length > 0) {
-          const adjustIdx = selectedCell.c === colWidths.length - 1 ? 0 : colWidths.length - 1;
-          colWidths[adjustIdx] += (FULL_W - newSumW);
-        }
-      }
+      colWidths[c] = clampedW;
+      colWidths[target_c] -= diff;
     }
 
-    // Scale row heights to sum up to exactly TABLE_H (250) without jumping the active row
-    if (!isNaN(h) && h >= 10 && h <= FULL_H) {
-      const maxH = TABLE_H - (rowHeights.length - 1) * 10;
-      const clampedH = Math.max(10, Math.min(h, maxH));
-      rowHeights[selectedCell.r] = clampedH;
+    // Adjust row height
+    if (!isNaN(h) && rowHeights.length > 1) {
+      const r = selectedCell.r;
+      const old_h = rowHeights[r];
+      const target_r = (r < rowHeights.length - 1) ? r + 1 : r - 1;
+      const max_allowable_h = rowHeights[r] + rowHeights[target_r] - MIN_CELL_H;
+      const clampedH = Math.max(MIN_CELL_H, Math.min(h, max_allowable_h));
+      const diff = clampedH - old_h;
       
-      const otherSumH = rowHeights.reduce((sum, height, idx) => idx === selectedCell.r ? sum : sum + height, 0);
-      if (otherSumH > 0) {
-        const remainingH = TABLE_H - clampedH;
-        const scaleY = remainingH / otherSumH;
-        rowHeights = rowHeights.map((height, idx) => {
-          if (idx === selectedCell.r) return clampedH;
-          return Math.floor(height * scaleY);
-        });
-        const newSumH = rowHeights.reduce((a, b) => a + b, 0);
-        if (newSumH !== TABLE_H && rowHeights.length > 0) {
-          const adjustIdx = selectedCell.r === rowHeights.length - 1 ? 0 : rowHeights.length - 1;
-          rowHeights[adjustIdx] += (TABLE_H - newSumH);
-        }
-      }
+      rowHeights[r] = clampedH;
+      rowHeights[target_r] -= diff;
     }
     
     saveState();
     
+    // Sync sliders and inputs to actual values
+    setEl('tt-tb-width',  colWidths[selectedCell.c]);
+    setEl('tt-tb-width-slider',  colWidths[selectedCell.c]);
+    setEl('tt-tb-height', rowHeights[selectedCell.r]);
+    setEl('tt-tb-height-slider', rowHeights[selectedCell.r]);
+    
     // Smooth DOM Update: instead of rebuilding DOM, update style properties directly to keep focus & prevent jumping
     colWidths.forEach((width, c) => {
       document.querySelectorAll(`.tt-cell[data-c="${c}"]`).forEach(td => {
-        td.style.minWidth = Math.max(40, width) + 'px';
+        td.style.minWidth = Math.max(20, width) + 'px';
       });
       const table = document.getElementById('tt-main-table');
       if (table && table.tHead) {
         const ths = table.tHead.querySelectorAll('.tt-col-header');
-        if (ths[c]) ths[c].style.minWidth = Math.max(40, width) + 'px';
+        if (ths[c]) ths[c].style.minWidth = Math.max(20, width) + 'px';
       }
     });
 
@@ -292,6 +282,58 @@
         td.style.height = height + 'px';
       });
     });
+
+    renderPreview();
+  };
+
+  window.ttResetSizes = function () {
+    const rows = rowHeights.length;
+    const cols = colWidths.length;
+    
+    // Equalize heights
+    rowHeights = [];
+    for (let r = 0; r < rows; r++) {
+      rowHeights.push(Math.floor(TABLE_H / rows));
+    }
+    const sumH = rowHeights.reduce((a, b) => a + b, 0);
+    if (sumH !== TABLE_H && rowHeights.length > 0) {
+      rowHeights[rowHeights.length - 1] += (TABLE_H - sumH);
+    }
+
+    // Equalize widths
+    colWidths = [];
+    for (let c = 0; c < cols; c++) {
+      colWidths.push(Math.floor(FULL_W / cols));
+    }
+    const sumW = colWidths.reduce((a, b) => a + b, 0);
+    if (sumW !== FULL_W && colWidths.length > 0) {
+      colWidths[colWidths.length - 1] += (FULL_W - sumW);
+    }
+    
+    saveState();
+    
+    // Update DOM styles
+    colWidths.forEach((width, c) => {
+      document.querySelectorAll(`.tt-cell[data-c="${c}"]`).forEach(td => {
+        td.style.minWidth = Math.max(20, width) + 'px';
+      });
+      const table = document.getElementById('tt-main-table');
+      if (table && table.tHead) {
+        const ths = table.tHead.querySelectorAll('.tt-col-header');
+        if (ths[c]) ths[c].style.minWidth = Math.max(20, width) + 'px';
+      }
+    });
+
+    rowHeights.forEach((height, r) => {
+      document.querySelectorAll(`.tt-cell[data-r="${r}"]`).forEach(td => {
+        td.style.height = height + 'px';
+      });
+    });
+    
+    // Update toolbar input sync if a cell is selected
+    if (selectedCell) {
+      syncToolbarFromCell(selectedCell.r, selectedCell.c);
+    }
 
     renderPreview();
   };

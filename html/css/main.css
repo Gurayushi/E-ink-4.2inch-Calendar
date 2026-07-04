@@ -1217,11 +1217,7 @@ body, fieldset, button, input, select, .log-container, .sleep-day-row, .timetabl
     padding: 1rem;
   }
 
-  button, select, input[type=text], input[type=number] {
-    width: 100%;
-    margin-bottom: 5px;
-    height: 44px; /* Better touch target */
-  }
+  /* Removed generic button/input overrides to prevent conflict with Tailwind classes */
 
   .timetable-cards-container {
     grid-template-columns: 1fr;
