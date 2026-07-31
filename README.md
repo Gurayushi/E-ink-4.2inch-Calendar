@@ -63,11 +63,6 @@ This project includes a web-based interface built with the **Web Bluetooth API**
 - 🔗 **Online**: [https://tsl0922.github.io/EPD-nRF5](https://tsl0922.github.io/EPD-nRF5)
 - 💾 **Offline**: Double-click `html/index.html` locally
 
-| Resource | Link |
-|----------|------|
-| 🎬 Demo Video | [Bilibili — BV1KWAVe1EKs](https://www.bilibili.com/video/BV1KWAVe1EKs) |
-| 💬 Discussion Group | [QQ Group: 1033086563](https://qm.qq.com/q/SckzhfDxuu) |
-
 The web interface supports:
 - Multiple image dithering algorithms
 - Doodle / draw on images
@@ -123,6 +118,7 @@ This project uses or references code from the following open-source projects:
 - [ZinggJM/GxEPD2](https://github.com/ZinggJM/GxEPD2)
 - [waveshareteam/e-Paper](https://github.com/waveshareteam/e-Paper)
 - [atc1441/ATC_TLSR_Paper](https://github.com/atc1441/ATC_TLSR_Paper)
+- [tsl0922/EPD-nRF5](https://github.com/tsl0922/EPD-nRF5) (Original Project)
 
 ---
 
