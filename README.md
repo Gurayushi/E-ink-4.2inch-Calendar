@@ -1,35 +1,120 @@
-# EPD-nRF5
+# EPD-nRF5 — E-Paper Calendar & Photo Frame
 
-E-paper display calendar firmware with support for Chinese lunar calendar, solar terms, and holiday schedules. It can also transmit images via Bluetooth to the e-paper display for use as a digital photo frame. The calendar interface is adapted for common 4.2-inch and 7.5-inch e-paper resolutions, and the same firmware can drive different screen sizes (screen size and driver can be switched online through the web interface).
+> E-paper display calendar firmware with support for Chinese lunar calendar, solar terms, and holiday schedules. It can also transmit images via Bluetooth to the e-paper display for use as a digital photo frame.
 
-Supported MCUs: `nrf51822` / `nrf51802` / `nrf52811` / `nrf52810`. For e-paper displays, it supports common `UC81xx` / `SSD16xx` series drivers (black & white / 3-color / 4-color). It also supports custom pin mapping from the e-paper display to the MCU, sleep/wake functionality (NFC / wireless charger), and Bluetooth OTA firmware updates.
+The calendar interface is adapted for common **4.2-inch** and **7.5-inch** e-paper resolutions, and the same firmware can drive different screen sizes *(screen size and driver can be switched online through the web interface)*.
 
-![](docs/images/3.jpg)
+![E-Paper Calendar Demo](docs/images/3.jpg)
 
-## Web Interface
+---
 
-This project includes a web-based interface implemented using Web Bluetooth API. You can use it on your phone or computer by visiting the URL below, or by directly double-clicking `html/index.html` locally.
+## ✨ Features
 
-- URL: https://tsl0922.github.io/EPD-nRF5
-- Demo Video: https://www.bilibili.com/video/BV1KWAVe1EKs
-- Discussion Group: [1033086563](https://qm.qq.com/q/SckzhfDxuu) (Click the link to join the chat group)
+- 📅 Monthly calendar display with Chinese lunar calendar, solar terms & holidays
+- 🖼️ Bluetooth image transmission — use as a digital photo frame
+- 🌐 Web-based control interface (Web Bluetooth API)
+- 🔄 Online screen size & driver switching (no reflash needed)
+- 💤 Sleep/wake support via NFC or wireless charger
+- 📡 Bluetooth OTA firmware updates
+- 🎨 Multiple image dithering algorithms
+- ✍️ Doodle on images and add custom text via web UI
 
-![](docs/images/0.jpg)
+---
 
-The web interface supports multiple image dithering algorithms and allows you to doodle on images and add text. In addition to displaying images as a digital photo frame, it can also switch to calendar mode to display monthly calendars, Chinese lunar calendar solar terms, holidays, and work schedule adjustments.
+## 🖥️ Supported Hardware
 
-## Supported Devices
+### MCU
+| Chip | Notes |
+|------|-------|
+| `nrf51822` | Supported |
+| `nrf51802` | Supported |
+| `nrf52811` | Supported |
+| `nrf52810` | Supported |
 
-[View Documentation](docs/devices.md).
+> Theoretically all electronic shelf labels (ESL) based on the above chips are supported.
 
-## Development
+### E-Paper Drivers
+| Driver Series | Colors |
+|--------------|--------|
+| `UC81xx` | Black & White / 3-color / 4-color |
+| `SSD16xx` | Black & White / 3-color / 4-color |
 
-[View Documentation](docs/develop.md).
+Custom pin mapping from the e-paper display to the MCU is supported.
 
-## Acknowledgments
+---
 
-This project uses or references code from the following projects:
+## 🌐 Web Interface
+
+This project includes a web-based interface built with the **Web Bluetooth API**. Use it on your phone or computer:
+
+- 🔗 **Online**: [https://tsl0922.github.io/EPD-nRF5](https://tsl0922.github.io/EPD-nRF5)
+- 💾 **Offline**: Double-click `html/index.html` locally
+
+| Resource | Link |
+|----------|------|
+| 🎬 Demo Video | [Bilibili — BV1KWAVe1EKs](https://www.bilibili.com/video/BV1KWAVe1EKs) |
+| 💬 Discussion Group | [QQ Group: 1033086563](https://qm.qq.com/q/SckzhfDxuu) |
+
+The web interface supports:
+- Multiple image dithering algorithms
+- Doodle / draw on images
+- Add custom text overlays
+- Switch between **photo frame** and **calendar** mode
+- Display monthly calendar, lunar dates, solar terms, holidays & work schedule adjustments
+
+---
+
+## 📱 Supported Devices
+
+### Laowu 4.2-inch ESL — Black & White
+
+| Spec | Value |
+|------|-------|
+| MCU | nrf51822 |
+| RAM | 16K |
+| ROM | 128K |
+| Driver | UC8176 |
+| Pin Config | `0508090A0B0C0D` |
+| Wakeup Pin | `07` |
+
+![Device 1](docs/images/1.jpg)
+
+> For more device configurations, see [docs/devices.md](docs/devices.md).
+
+---
+
+## 🛠️ Development
+
+See [docs/develop.md](docs/develop.md) for build instructions, toolchain setup, and flashing guide.
+
+### Project Structure
+
+```
+E-ink-4.2inch-Calendar/
+├── EPD/          # E-paper display driver source
+├── GUI/          # GUI rendering layer
+├── Keil/         # Keil MDK project files
+├── docs/         # Documentation & images
+├── html/         # Web interface (index.html)
+├── tools/        # Utility tools
+├── main.c        # Firmware entry point
+├── main.h        # Header
+├── emulator.c    # PC emulator for testing
+└── Makefile      # Build system
+```
+
+---
+
+## 🙏 Acknowledgments
+
+This project uses or references code from the following open-source projects:
 
 - [ZinggJM/GxEPD2](https://github.com/ZinggJM/GxEPD2)
 - [waveshareteam/e-Paper](https://github.com/waveshareteam/e-Paper)
 - [atc1441/ATC_TLSR_Paper](https://github.com/atc1441/ATC_TLSR_Paper)
+
+---
+
+## 📄 License
+
+This project is licensed under the **GPL-3.0 License** — see the [LICENSE](LICENSE) file for details.
