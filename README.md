@@ -60,7 +60,7 @@ Custom pin mapping from the e-paper display to the MCU is supported.
 
 This project includes a web-based interface built with the **Web Bluetooth API**. Use it on your phone or computer:
 
-- 🔗 **Online**: [https://tsl0922.github.io/EPD-nRF5](https://tsl0922.github.io/EPD-nRF5)
+- 🔗 **Online**: [https://gurayushi.github.io/epd-web/](https://gurayushi.github.io/epd-web/)
 - 💾 **Offline**: Double-click `html/index.html` locally
 
 The web interface supports:
@@ -69,7 +69,8 @@ The web interface supports:
 - Add custom text overlays
 - Switch between **photo frame** and **calendar** mode
 - Display monthly calendar, lunar dates, solar terms, holidays & work schedule adjustments
-
+- The timetable interface acts like a mini Excel spreadsheet
+- The timetable interface works as a mini Excel
 ---
 
 ## 📱 Supported Devices
