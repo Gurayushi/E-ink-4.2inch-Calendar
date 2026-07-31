@@ -4,8 +4,6 @@
 
 The calendar interface is adapted for common **4.2-inch** and **7.5-inch** e-paper resolutions, and the same firmware can drive different screen sizes *(screen size and driver can be switched online through the web interface)*.
 
-![E-Paper Calendar Demo](docs/images/3.jpg)
-
 ---
 
 ## ✨ Features
@@ -18,6 +16,21 @@ The calendar interface is adapted for common **4.2-inch** and **7.5-inch** e-pap
 - 📡 Bluetooth OTA firmware updates
 - 🎨 Multiple image dithering algorithms
 - ✍️ Doodle on images and add custom text via web UI
+
+### Visual Gallery
+
+Here are some examples of what the e-ink display can show:
+
+<p align="center">
+  <img src="docs/images/feature-timetable.jpg" width="30%" alt="Timetable View">
+  <img src="docs/images/feature-photo.jpg" width="30%" alt="Digital Photo Frame">
+  <img src="docs/images/feature-calendar.jpg" width="30%" alt="Calendar View">
+</p>
+<p align="center">
+  <img src="docs/images/feature-poem.jpg" width="30%" alt="Poem/Quote View">
+  <img src="docs/images/feature-weather.jpg" width="30%" alt="Weather Dashboard View">
+</p>
+
 
 ---
 
@@ -76,8 +89,6 @@ The web interface supports:
 | Driver | UC8176 |
 | Pin Config | `0508090A0B0C0D` |
 | Wakeup Pin | `07` |
-
-![Device 1](docs/images/1.jpg)
 
 > For more device configurations, see [docs/devices.md](docs/devices.md).
 
